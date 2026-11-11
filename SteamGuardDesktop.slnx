@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SteamGuardDesktop/SteamGuardDesktop.csproj" />
+  <Project Path="SteamGuardDesktop.ArchitectureTests/SteamGuardDesktop.ArchitectureTests.csproj" />
+  <Project Path="SteamGuardDesktop.IntegrationTests/SteamGuardDesktop.IntegrationTests.csproj" />
+  <Project Path="SteamGuardDesktop.UnitTests/SteamGuardDesktop.UnitTests.csproj" />
+</Solution>

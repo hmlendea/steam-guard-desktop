@@ -25,6 +25,8 @@ namespace SteamGuardDesktop.Client.Steam
 
         private static string ConfirmationOperationPath => "mobileconf/ajaxop";
 
+        private static string ConfirmationDetailsPathPrefix => "mobileconf/details/";
+
         private static string ServerTimePath => "ITwoFactorService/QueryTime/v0001";
 
         private static string SteamCookieDomain => "https://steamcommunity.com";
@@ -176,6 +178,51 @@ namespace SteamGuardDesktop.Client.Steam
                 new LogInfo(SteamGuardInfoKey.ConfirmationCount, confirmations.Count));
 
             return SteamClientResult<IEnumerable<Confirmation>>.Successful(confirmations);
+        }
+
+        /// <inheritdoc />
+        public SteamClientResult<string> GetConfirmationDetails(
+            ConfirmationRequestContext context,
+            string confirmationIdentifier)
+        {
+            ArgumentNullException.ThrowIfNull(context, nameof(context));
+            ArgumentException.ThrowIfNullOrWhiteSpace(confirmationIdentifier, nameof(confirmationIdentifier));
+
+            SteamClientResult<long> serverTimeResult = GetServerTime();
+
+            if (!serverTimeResult.IsSuccessful)
+            {
+                return SteamClientResult<string>.Failed(serverTimeResult.FailureReason);
+            }
+
+            string query = requestBuilder.BuildConfirmationDetailsQuery(context, serverTimeResult.Value);
+            string requestAddress = CombineAddress(
+                settings.SteamCommunityBaseAddress,
+                ConfirmationDetailsPathPrefix + Uri.EscapeDataString(confirmationIdentifier)) + "?" + query;
+
+            SteamClientResult<string> payloadResult = SendSignedRequest(
+                SteamGuardOperation.LoadConfirmationDetails,
+                requestAddress,
+                context);
+
+            if (!payloadResult.IsSuccessful || payloadResult.Value is null)
+            {
+                return SteamClientResult<string>.Failed(payloadResult.FailureReason);
+            }
+
+            if (!responseParser.TryParse(payloadResult.Value, out GetConfirmationDetailsResponse? detailsResponse) ||
+                detailsResponse is null)
+            {
+                return SteamClientResult<string>.Failed("The confirmation details could not be read.");
+            }
+
+            if (!detailsResponse.IsSuccessful)
+            {
+                return SteamClientResult<string>.Failed("Steam rejected the details request.");
+            }
+
+            return SteamClientResult<string>.Successful(
+                ConfirmationDetailsTextConverter.ToPlainText(detailsResponse.Html));
         }
 
         /// <inheritdoc />

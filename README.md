@@ -150,6 +150,7 @@ For the detailed description of how the application handles privacy and personal
 | Identity secret | Sign confirmation requests | Platform credential store, or the encrypted fallback | Until the account is removed | No |
 | Steam access token | Authenticate confirmation requests | Platform credential store, or the encrypted fallback | Until the account is removed | Yes |
 | Revocation code | Remove the authenticator from the account | Platform credential store, or the encrypted fallback | Until the account is removed | Yes |
+| Confirmation details | Describe a pending confirmation before a decision | In memory only | Discarded when the confirmation list is refreshed | Yes |
 | Diagnostics | Report failures without exposing secrets | Console and optional log file | Until the log file is deleted | Yes |
 
 ### Data Locations

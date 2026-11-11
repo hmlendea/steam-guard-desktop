@@ -43,20 +43,5 @@ namespace SteamGuardDesktop.ViewModels
         /// Gets the Steam identifier of the account.
         /// </summary>
         public string SteamIdentifier => account.SteamIdentifier;
-
-        /// <summary>
-        /// Updates the account metadata represented by this entry.
-        /// </summary>
-        /// <param name="updatedAccount">The updated account metadata.</param>
-        public void Update(SteamAccount updatedAccount)
-        {
-            ArgumentNullException.ThrowIfNull(updatedAccount, nameof(updatedAccount));
-
-            account = updatedAccount;
-
-            OnPropertyChanged(nameof(Account));
-            OnPropertyChanged(nameof(Label));
-            OnPropertyChanged(nameof(SteamIdentifier));
-        }
     }
 }

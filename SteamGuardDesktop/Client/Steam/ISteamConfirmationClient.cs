@@ -23,6 +23,14 @@ namespace SteamGuardDesktop.Client.Steam
         SteamClientResult<IEnumerable<Confirmation>> GetConfirmations(ConfirmationRequestContext context);
 
         /// <summary>
+        /// Retrieves the safe descriptive text of a pending confirmation.
+        /// </summary>
+        /// <param name="context">The account material required to sign the request.</param>
+        /// <param name="confirmationIdentifier">The identifier of the confirmation to inspect.</param>
+        /// <returns>The descriptive text of the confirmation.</returns>
+        SteamClientResult<string> GetConfirmationDetails(ConfirmationRequestContext context, string confirmationIdentifier);
+
+        /// <summary>
         /// Applies a decision to a pending confirmation.
         /// </summary>
         /// <param name="context">The account material required to sign the request.</param>

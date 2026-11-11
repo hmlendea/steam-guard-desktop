@@ -4,14 +4,19 @@ using System.Linq;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using NuciLog.Core;
+
+using SteamGuardDesktop.Configuration;
 using SteamGuardDesktop.Domain.Account;
 using SteamGuardDesktop.Domain.Authenticator;
 using SteamGuardDesktop.Domain.Confirmations;
+using SteamGuardDesktop.Logging;
 using SteamGuardDesktop.Service.Account;
 using SteamGuardDesktop.Service.Confirmations;
 using SteamGuardDesktop.Service.Platform;
 using SteamGuardDesktop.Service.Storage;
 using SteamGuardDesktop.Service.Theming;
+using SteamGuardDesktop.Service.Time;
 
 namespace SteamGuardDesktop.ViewModels
 {
@@ -28,6 +33,14 @@ namespace SteamGuardDesktop.ViewModels
 
         private readonly IThemeService themeService;
 
+        private readonly IClockDriftService clockDriftService;
+
+        private readonly ITicker ticker;
+
+        private readonly SteamGuardSettings settings;
+
+        private readonly ILogger logger;
+
         [ObservableProperty]
         private AccountItemViewModel? selectedAccount;
 
@@ -41,10 +54,22 @@ namespace SteamGuardDesktop.ViewModels
         private PlatformTheme currentTheme;
 
         [ObservableProperty]
+        private ThemePreference themePreference;
+
+        [ObservableProperty]
+        private string? accentColour;
+
+        [ObservableProperty]
         private bool isAccountHidden;
 
         [ObservableProperty]
         private bool isDecisionInProgress;
+
+        [ObservableProperty]
+        private bool isDetailsLoading;
+
+        [ObservableProperty]
+        private string confirmationDetails = string.Empty;
 
         /// <summary>
         /// Initialises a new instance of the <see cref="MainViewModel"/> class.
@@ -55,13 +80,21 @@ namespace SteamGuardDesktop.ViewModels
         /// <param name="accountSetupViewModel">The account setup view model.</param>
         /// <param name="clipboardWriter">The clipboard writer of the host platform.</param>
         /// <param name="themeService">The platform theme service.</param>
+        /// <param name="clockDriftService">The service that compares the local clock with the Steam clock.</param>
+        /// <param name="ticker">The ticker that drives the countdown.</param>
+        /// <param name="settings">The application settings.</param>
+        /// <param name="logger">The diagnostics logger.</param>
         public MainViewModel(
             IAccountService accountService,
             IConfirmationService confirmationService,
             AuthenticatorViewModel authenticatorViewModel,
             AccountSetupViewModel accountSetupViewModel,
             IClipboardWriter clipboardWriter,
-            IThemeService themeService)
+            IThemeService themeService,
+            IClockDriftService clockDriftService,
+            ITicker ticker,
+            SteamGuardSettings settings,
+            ILogger logger)
         {
             ArgumentNullException.ThrowIfNull(accountService, nameof(accountService));
             ArgumentNullException.ThrowIfNull(confirmationService, nameof(confirmationService));
@@ -69,14 +102,25 @@ namespace SteamGuardDesktop.ViewModels
             ArgumentNullException.ThrowIfNull(accountSetupViewModel, nameof(accountSetupViewModel));
             ArgumentNullException.ThrowIfNull(clipboardWriter, nameof(clipboardWriter));
             ArgumentNullException.ThrowIfNull(themeService, nameof(themeService));
+            ArgumentNullException.ThrowIfNull(clockDriftService, nameof(clockDriftService));
+            ArgumentNullException.ThrowIfNull(ticker, nameof(ticker));
+            ArgumentNullException.ThrowIfNull(settings, nameof(settings));
+            ArgumentNullException.ThrowIfNull(logger, nameof(logger));
 
             this.accountService = accountService;
             this.confirmationService = confirmationService;
             this.clipboardWriter = clipboardWriter;
             this.themeService = themeService;
+            this.clockDriftService = clockDriftService;
+            this.ticker = ticker;
+            this.settings = settings;
+            this.logger = logger;
 
             Authenticator = authenticatorViewModel;
             AccountSetup = accountSetupViewModel;
+            ThemePreference = settings.ThemePreference;
+            themeService.ApplyTheme(settings.ThemePreference);
+            ticker.Tick += OnTickerTick;
         }
 
         /// <summary>
@@ -120,12 +164,30 @@ namespace SteamGuardDesktop.ViewModels
         public bool HasFailure => !string.IsNullOrWhiteSpace(StatusMessage);
 
         /// <summary>
+        /// Gets a value indicating whether account details are currently concealed.
+        /// </summary>
+        public bool AreAccountDetailsConcealed => IsAccountHidden;
+
+        /// <summary>
+        /// Gets a value indicating whether the details of a confirmation are available.
+        /// </summary>
+        public bool HasConfirmationDetails => !string.IsNullOrWhiteSpace(ConfirmationDetails);
+
+        /// <summary>
         /// Loads the configured accounts and their current state.
         /// </summary>
         public void Load()
         {
             SecretStoreAvailability = accountService.GetSecretStoreAvailability();
             CurrentTheme = themeService.GetCurrentTheme();
+            AccentColour = themeService.GetAccentColour();
+
+            logger.Info(
+                SteamGuardOperation.ResolveTheme,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.PlatformTheme, CurrentTheme.ToString()),
+                new LogInfo(SteamGuardInfoKey.DesktopEnvironment, themeService.GetDesktopEnvironment()));
+            IsAccountHidden = false;
 
             Accounts.Clear();
 
@@ -134,10 +196,22 @@ namespace SteamGuardDesktop.ViewModels
                 Accounts.Add(new AccountItemViewModel(account));
             }
 
+            logger.Info(
+                SteamGuardOperation.LaunchApplication,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.AccountCount, Accounts.Count),
+                new LogInfo(SteamGuardInfoKey.SecretStoreAvailability, SecretStoreAvailability.ToString()));
+
             OnPropertyChanged(nameof(HasAccounts));
             OnPropertyChanged(nameof(IsSecretStoreUnavailable));
+            OnPropertyChanged(nameof(AreAccountDetailsConcealed));
 
             SelectedAccount = Accounts.FirstOrDefault();
+
+            RefreshCode();
+            EvaluateClockDrift();
+
+            ticker.Start();
         }
 
         /// <summary>
@@ -183,6 +257,7 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             Confirmations.Clear();
+            ConfirmationDetails = string.Empty;
             Authenticator.Clear();
             ClearStatus();
             Load();
@@ -195,7 +270,7 @@ namespace SteamGuardDesktop.ViewModels
         {
             if (SelectedAccount is null)
             {
-                ReportStatus("Select an account first.");
+                Authenticator.Clear();
 
                 return;
             }
@@ -210,8 +285,12 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
-            ClearStatus();
             Authenticator.Refresh(secrets.SharedSecret);
+
+            logger.Debug(
+                SteamGuardOperation.GenerateCode,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.AccountIdentifier, SelectedAccount.Identifier));
         }
 
         /// <summary>
@@ -267,6 +346,38 @@ namespace SteamGuardDesktop.ViewModels
         }
 
         /// <summary>
+        /// Loads the descriptive text of the selected confirmation.
+        /// </summary>
+        public void LoadSelectedConfirmationDetails()
+        {
+            if (SelectedAccount is null || SelectedConfirmation is null)
+            {
+                ReportStatus("Select a confirmation first.");
+
+                return;
+            }
+
+            IsDetailsLoading = true;
+
+            ConfirmationDetailsResult result = confirmationService.GetConfirmationDetails(
+                SelectedAccount.Account,
+                SelectedConfirmation.Confirmation.Identifier);
+
+            IsDetailsLoading = false;
+
+            if (!result.IsSuccessful)
+            {
+                ConfirmationDetails = string.Empty;
+                ReportStatus(result.FailureReason);
+
+                return;
+            }
+
+            ConfirmationDetails = result.Details;
+            ClearStatus();
+        }
+
+        /// <summary>
         /// Approves the selected confirmation.
         /// </summary>
         public void ApproveSelectedConfirmation() => ApplyDecision(ConfirmationDecisionType.Approve);
@@ -279,13 +390,101 @@ namespace SteamGuardDesktop.ViewModels
         /// <summary>
         /// Toggles whether account details are hidden.
         /// </summary>
-        public void ToggleAccountVisibility() => IsAccountHidden = !IsAccountHidden;
+        public void ToggleAccountVisibility()
+        {
+            IsAccountHidden = !IsAccountHidden;
+            OnPropertyChanged(nameof(AreAccountDetailsConcealed));
+
+            if (IsAccountHidden)
+            {
+                ConfirmationDetails = string.Empty;
+                Authenticator.Clear();
+                Confirmations.Clear();
+                OnPropertyChanged(nameof(HasConfirmations));
+            }
+            else
+            {
+                RefreshCode();
+            }
+        }
+
+        /// <summary>
+        /// Conceals account details when the window loses focus and the setting is enabled.
+        /// </summary>
+        public void HandleWindowDeactivated()
+        {
+            if (!settings.IsAccountHiddenWhenInactive || IsAccountHidden)
+            {
+                return;
+            }
+
+            IsAccountHidden = true;
+            ConfirmationDetails = string.Empty;
+            Authenticator.Clear();
+            Confirmations.Clear();
+
+            OnPropertyChanged(nameof(AreAccountDetailsConcealed));
+            OnPropertyChanged(nameof(HasConfirmations));
+        }
+
+        /// <summary>
+        /// Applies the requested theme preference and remembers it.
+        /// </summary>
+        /// <param name="themePreferenceValue">The theme preference selected by the user.</param>
+        public void ApplyThemePreference(ThemePreference themePreferenceValue)
+        {
+            ThemePreference = themePreferenceValue;
+            settings.ThemePreference = themePreferenceValue;
+
+            CurrentTheme = themeService.ApplyTheme(themePreferenceValue);
+            AccentColour = themeService.GetAccentColour();
+
+            logger.Info(
+                SteamGuardOperation.ResolveTheme,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.PlatformTheme, CurrentTheme.ToString()));
+        }
+
+        /// <summary>
+        /// Stops background signalling when the window is closing.
+        /// </summary>
+        public void ShutDown()
+        {
+            ticker.Tick -= OnTickerTick;
+            ticker.Stop();
+        }
+
+        private void OnTickerTick(object? sender, EventArgs arguments)
+        {
+            Authenticator.UpdateCountdown();
+
+            if (!Authenticator.HasExpired() || SelectedAccount is null)
+            {
+                return;
+            }
+
+            RefreshCode();
+        }
+
+        private void EvaluateClockDrift()
+        {
+            ClockDriftReport? driftReport = clockDriftService.Evaluate();
+
+            if (driftReport is null)
+            {
+                return;
+            }
+
+            Authenticator.ApplyClockDrift(driftReport);
+        }
 
         private void ReplaceConfirmations(ConfirmationListResult result)
         {
             Confirmation[] confirmations = [.. result.Confirmations];
 
             Confirmations.Clear();
+            ConfirmationDetails = string.Empty;
+            SelectedConfirmation = null;
 
             foreach (Confirmation confirmation in confirmations)
             {
@@ -362,8 +561,7 @@ namespace SteamGuardDesktop.ViewModels
             return string.Join(" ", result.ValidationErrors);
         }
 
-        private static string DescribeFailure(string failureReason, bool requiresAuthentication)
-        {
+        private static string DescribeFailure(string failureReason, bool requiresAuthentication){
             if (requiresAuthentication)
             {
                 return "The Steam session is no longer valid. A new access token is required.";
@@ -376,5 +574,8 @@ namespace SteamGuardDesktop.ViewModels
 
             return failureReason;
         }
+
+        /// <inheritdoc />
+        partial void OnConfirmationDetailsChanged(string value) => OnPropertyChanged(nameof(HasConfirmationDetails));
     }
 }

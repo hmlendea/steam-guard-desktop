@@ -16,6 +16,8 @@ namespace SteamGuardDesktop.Client.Steam
     {
         private static string ListTag => "conf";
 
+        private static string DetailsTag => "details";
+
         /// <summary>
         /// Builds the signed query parameters for a request signed at the specified Steam time.
         /// </summary>
@@ -52,6 +54,15 @@ namespace SteamGuardDesktop.Client.Steam
         /// <returns>The encoded query string.</returns>
         public string BuildConfirmationListQuery(ConfirmationRequestContext context, long unixTimeSeconds)
             => Encode(BuildSignedParameters(context, ListTag, unixTimeSeconds));
+
+        /// <summary>
+        /// Builds the encoded query string of a confirmation details request.
+        /// </summary>
+        /// <param name="context">The account material required to sign the request.</param>
+        /// <param name="unixTimeSeconds">The Steam server time expressed as a Unix timestamp in seconds.</param>
+        /// <returns>The encoded query string.</returns>
+        public string BuildConfirmationDetailsQuery(ConfirmationRequestContext context, long unixTimeSeconds)
+            => Encode(BuildSignedParameters(context, DetailsTag, unixTimeSeconds));
 
         /// <summary>
         /// Builds the encoded query string of a confirmation decision request.

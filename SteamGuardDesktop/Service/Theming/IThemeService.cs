@@ -1,7 +1,9 @@
+using SteamGuardDesktop.Configuration;
+
 namespace SteamGuardDesktop.Service.Theming
 {
     /// <summary>
-    /// Reports the host platform and the resolved platform theme.
+    /// Reports the host platform, resolves the platform theme, and applies the requested theme variant.
     /// </summary>
     public interface IThemeService
     {
@@ -10,6 +12,19 @@ namespace SteamGuardDesktop.Service.Theming
         /// </summary>
         /// <returns>The resolved platform theme.</returns>
         PlatformTheme GetCurrentTheme();
+
+        /// <summary>
+        /// Applies the requested theme preference and returns the resulting platform theme.
+        /// </summary>
+        /// <param name="themePreference">The theme preference selected by the user.</param>
+        /// <returns>The platform theme that is now applied.</returns>
+        PlatformTheme ApplyTheme(ThemePreference themePreference);
+
+        /// <summary>
+        /// Gets the accent colour configured in the host operating system.
+        /// </summary>
+        /// <returns>The accent colour as a hexadecimal value, or <c>null</c> when the host does not expose one.</returns>
+        string? GetAccentColour();
 
         /// <summary>
         /// Gets the desktop environment detected on the current host.

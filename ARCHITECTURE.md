@@ -113,7 +113,9 @@ The principal runtime sequence is:
 | `OtpCodeGenerator` | Produces Steam Guard codes and their validity window | `ISteamGuard`, `IClock` | Singleton |
 | `ConfirmationRequestSigner` | Produces HMAC-SHA1 confirmation signatures | `System.Security.Cryptography` | Singleton |
 | `PlatformThemeResolver` | Resolves the platform theme from a host description | None | Singleton |
-| `ThemeService` | Reports the detected desktop session and resolved theme | `IPlatformThemeResolver` | Singleton |
+| `ThemeService` | Applies the requested theme variant and reports the resolved theme and accent colour | `IPlatformThemeResolver`, `ISystemAccentColourProvider` | Singleton |
+| `ClockDriftService` | Compares the local clock with the Steam server clock | `ISteamConfirmationClient`, `IClock` | Singleton |
+| `AvaloniaTicker` | Signals once per second so that the countdown can update | Avalonia dispatcher | Singleton |
 
 ## 🗂️ Architectural Areas
 
@@ -223,6 +225,7 @@ flowchart LR
 | `/ITwoFactorService/QueryTime/v0001` | Outbound | HTTPS GET returning the Steam server time as a Unix timestamp | Valve | A failure aborts the calling operation with a safe reason |
 | `/mobileconf/getlist` | Outbound | HTTPS GET with signed parameters `p`, `a`, `k`, `t`, `m`, `tag` | Valve | `needauth` produces a re-authentication result; other failures produce a safe reason |
 | `/mobileconf/ajaxop` | Outbound | HTTPS GET with signed parameters plus `op`, `cid`, and `ck` | Valve | `needsauth` produces a re-authentication result; other failures produce a safe reason |
+| `/mobileconf/details/{id}` | Outbound | HTTPS GET with signed parameters using the `details` tag | Valve | A rejected request produces a safe reason; the HTML fragment is reduced to plain text |
 | `INativeSecretBackend` | Local | Credential read, write, and delete by entry name | Application and operating system | Unavailable stores are reported to the caller |
 | `IPlatformThemeResolver` | Local | Pure function from host description to platform theme | Application | Unidentified environments resolve to the documented fallback |
 
@@ -246,7 +249,7 @@ sequenceDiagram
     Generator-->>ViewModel: Code with expiry
 ```
 
-The generator validates the Base32 alphabet before delegating to `SteamGuard.TOTP`, so an invalid secret produces no code instead of an exception. Expiry is the next 30-second boundary after the current moment, and the view model derives the countdown from the injected clock.
+The generator validates the Base32 alphabet before delegating to `SteamGuard.TOTP`, so an invalid secret produces no code instead of an exception. Expiry is the next 30-second boundary after the current moment, and the view model derives the countdown from the injected clock. `AvaloniaTicker` signals once per second so the countdown updates without a manual action, and an expired code is regenerated automatically. The clock comparison runs when the account list is loaded and surfaces a warning when the local clock differs from the Steam clock by more than 30 seconds.
 
 ### Confirmation Decision
 
@@ -269,17 +272,17 @@ sequenceDiagram
     ViewModel->>Service: GetConfirmations(account)
 ```
 
-The view model refuses a second decision while one is in progress, rejects unsupported confirmation types, and refreshes the list after a successful decision instead of mutating the list locally.
+The view model refuses a second decision while one is in progress, rejects unsupported confirmation types, and refreshes the list after a successful decision instead of mutating the list locally. Selecting a confirmation populates the creation time and, on request, loads the details fragment through `/mobileconf/details/{id}`, which is reduced to plain text before it is displayed.
 
 ## ⚙️ Platform Theming
 
-The theme resolver is a pure function over a `PlatformDescription` value: Windows resolves to the Fluent theme, macOS to the Aqua theme, GNOME to Adwaita, KDE to Breeze, and any unidentified environment to the documented fallback. The theme service supplies the host description from the operating system and desktop environment variables. Feature views consume shared resources from `Views/ThemeResources.axaml` rather than platform-specific values.
+The theme resolver is a pure function over a `PlatformDescription` value: Windows resolves to the Fluent theme, macOS to the Aqua theme, GNOME to Adwaita, KDE to Breeze, and any unidentified environment to the documented fallback. `ThemeService` applies the user preference as an Avalonia theme variant, so the system, light, and dark variants are selected at runtime with System as the default. The accent colour is read from the host through `ISystemAccentColourProvider`, which reads the Windows accent colour hint, the macOS accent colour default, the GNOME accent colour setting, and the KDE accent colour declaration. Feature views consume shared resources from `Views/ThemeResources.axaml` rather than platform-specific values.
 
 ## 🧵 Cross-Cutting Concerns
 
 ### Security and Privacy
 
-Secrets are treated as credentials. They are erased from the setup form after a successful save, written only to the platform credential store or the encrypted fallback, and never logged. `SteamGuardInfoKey` declares sensitive structured keys so the logger masks secret, token, signature, and address values. Request addresses are sanitised before diagnostics are emitted. Approving or denying a confirmation requires an explicit user action.
+Secrets are treated as credentials. They are erased from the setup form after a successful save, written only to the platform credential store or the encrypted fallback, and never logged. `SteamGuardInfoKey` declares sensitive structured keys so the logger masks secret, token, signature, and address values. Request addresses are sanitised before diagnostics are emitted. Approving or denying a confirmation requires an explicit user action. Account details, the displayed code, the confirmation list, and confirmation details are concealed when the window loses focus while `SteamGuardSettings.IsAccountHiddenWhenInactive` is enabled. Entered secrets are concealed unless `SteamGuardSettings.IsSecretRevealAllowed` is enabled and the user reveals them explicitly.
 
 ### Error Handling
 
@@ -287,7 +290,7 @@ Failures are translated into result objects with safe reasons at the boundary th
 
 ### Observability
 
-`SteamGuardLogger` writes structured lines through `NuciLog.Core` with an `Operation` on every call. Sensitive keys are declared as sensitive, and free-text messages are avoided for values that could identify an account. Logs are written to the console and, when enabled, to a log file.
+`SteamGuardLogger` writes structured lines through `NuciLog.Core` with an `Operation` on every call. Sensitive keys are declared as sensitive, and free-text messages are avoided for values that could identify an account. Account saves, account removals, authenticator codes, confirmation loads, confirmation decisions, secret store status, and theme resolution are recorded with operations and structured keys; secrets, tokens, signatures, and request addresses are never recorded. Logs are written to the console and, when enabled, to a log file.
 
 ### Configuration
 
@@ -351,7 +354,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, device identifiers, confirmation signatures, type mapping, theme resolution, secret redaction, and account validation. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, and source-file conventions.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, theme resolution, accent colour reading, HTML-to-text conversion, secret redaction, and account validation. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, and source-file conventions.
 
 Execute the principal automated verification with:
 

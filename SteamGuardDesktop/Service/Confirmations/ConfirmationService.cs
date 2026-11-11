@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 
+using NuciLog.Core;
+
 using SteamGuardDesktop.Client.Steam;
 using SteamGuardDesktop.Domain.Account;
 using SteamGuardDesktop.Domain.Authenticator;
 using SteamGuardDesktop.Domain.Confirmations;
 using SteamGuardDesktop.Domain.Steam;
+using SteamGuardDesktop.Logging;
 using SteamGuardDesktop.Service.Account;
 
 namespace SteamGuardDesktop.Service.Confirmations
@@ -15,7 +18,8 @@ namespace SteamGuardDesktop.Service.Confirmations
     /// </summary>
     public sealed class ConfirmationService(
         ISteamConfirmationClient steamClient,
-        IAccountService accountService) : IConfirmationService
+        IAccountService accountService,
+        ILogger logger) : IConfirmationService
     {
         /// <inheritdoc />
         public ConfirmationListResult GetConfirmations(SteamAccount account)
@@ -26,6 +30,11 @@ namespace SteamGuardDesktop.Service.Confirmations
 
             if (context is null)
             {
+                logger.Warn(
+                    SteamGuardOperation.LoadConfirmations,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.AccountIdentifier, account.Identifier));
+
                 return ConfirmationListResult.Failed("The account secrets are unavailable.", false);
             }
 
@@ -56,10 +65,37 @@ namespace SteamGuardDesktop.Service.Confirmations
 
             if (!result.IsSuccessful)
             {
+                logger.Warn(
+                    SteamGuardOperation.ApplyConfirmationDecision,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.SteamOperation, decision.OperationName));
+
                 return ConfirmationDecisionResult.Failed(result.FailureReason, result.RequiresAuthentication);
             }
 
             return ConfirmationDecisionResult.Successful();
+        }
+
+        /// <inheritdoc />
+        public ConfirmationDetailsResult GetConfirmationDetails(SteamAccount account, string confirmationIdentifier)
+        {
+            ArgumentNullException.ThrowIfNull(account, nameof(account));
+            ArgumentException.ThrowIfNullOrWhiteSpace(confirmationIdentifier, nameof(confirmationIdentifier));
+
+            ConfirmationRequestContext? context = BuildContext(account);
+
+            if (context is null)
+            {
+                return ConfirmationDetailsResult.Failed("The account secrets are unavailable.");
+            }
+            SteamClientResult<string> result = steamClient.GetConfirmationDetails(context, confirmationIdentifier);
+
+            if (!result.IsSuccessful)
+            {
+                return ConfirmationDetailsResult.Failed(result.FailureReason);
+            }
+
+            return ConfirmationDetailsResult.Successful(result.Value ?? string.Empty);
         }
 
         private ConfirmationRequestContext? BuildContext(SteamAccount account)

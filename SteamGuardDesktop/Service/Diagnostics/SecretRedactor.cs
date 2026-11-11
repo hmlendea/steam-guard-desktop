@@ -3,24 +3,13 @@ using System;
 namespace SteamGuardDesktop.Service.Diagnostics
 {
     /// <summary>
-    /// Replaces sensitive values with a fixed mask.
+    /// Removes sensitive values from request addresses.
     /// </summary>
     public sealed class SecretRedactor : ISecretRedactor
     {
         private static string MaskText => "********";
 
         private static string RedactedAddressSuffix => "?[redacted]";
-
-        /// <inheritdoc />
-        public string Mask(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return MaskText;
-            }
-
-            return MaskText;
-        }
 
         /// <inheritdoc />
         public string SanitiseAddress(string address)

@@ -17,9 +17,6 @@ namespace SteamGuardDesktop.IntegrationTests.Utils
         public List<string> SanitisedAddresses { get; } = [];
 
         /// <inheritdoc />
-        public string Mask(string value) => innerRedactor.Mask(value);
-
-        /// <inheritdoc />
         public string SanitiseAddress(string address)
         {
             SanitisedAddresses.Add(address);

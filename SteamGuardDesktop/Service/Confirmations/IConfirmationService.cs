@@ -18,6 +18,14 @@ namespace SteamGuardDesktop.Service.Confirmations
         ConfirmationListResult GetConfirmations(SteamAccount account);
 
         /// <summary>
+        /// Loads the safe descriptive text of a pending confirmation.
+        /// </summary>
+        /// <param name="account">The account that owns the confirmation.</param>
+        /// <param name="confirmationIdentifier">The identifier of the confirmation to inspect.</param>
+        /// <returns>The outcome of the operation.</returns>
+        ConfirmationDetailsResult GetConfirmationDetails(SteamAccount account, string confirmationIdentifier);
+
+        /// <summary>
         /// Applies a decision to a pending confirmation.
         /// </summary>
         /// <param name="account">The account that owns the confirmation.</param>

@@ -43,6 +43,11 @@ namespace SteamGuardDesktop.Logging
         public static Operation LoadConfirmations => new SteamGuardOperation(nameof(LoadConfirmations));
 
         /// <summary>
+        /// Gets the operation that loads the details of a pending confirmation.
+        /// </summary>
+        public static Operation LoadConfirmationDetails => new SteamGuardOperation(nameof(LoadConfirmationDetails));
+
+        /// <summary>
         /// Gets the operation that applies a confirmation decision.
         /// </summary>
         public static Operation ApplyConfirmationDecision => new SteamGuardOperation(nameof(ApplyConfirmationDecision));

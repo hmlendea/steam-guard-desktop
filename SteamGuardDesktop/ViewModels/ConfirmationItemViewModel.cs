@@ -49,26 +49,15 @@ namespace SteamGuardDesktop.ViewModels
         public DateTimeOffset CreatedAt => confirmation.CreatedAt;
 
         /// <summary>
+        /// Gets the creation time of the confirmation formatted for display.
+        /// </summary>
+        public string CreatedAtDisplay => confirmation.CreatedAt.ToLocalTime().ToString(
+            "yyyy'-'MM'-'dd' 'HH':'mm",
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>
         /// Gets a value indicating whether the confirmation can be approved or denied.
         /// </summary>
         public bool CanBeDecided => confirmation.CanBeDecided;
-
-        /// <summary>
-        /// Updates the confirmation represented by this entry.
-        /// </summary>
-        /// <param name="updatedConfirmation">The updated confirmation.</param>
-        public void Update(Confirmation updatedConfirmation)
-        {
-            ArgumentNullException.ThrowIfNull(updatedConfirmation, nameof(updatedConfirmation));
-
-            confirmation = updatedConfirmation;
-
-            OnPropertyChanged(nameof(Confirmation));
-            OnPropertyChanged(nameof(Headline));
-            OnPropertyChanged(nameof(TypeName));
-            OnPropertyChanged(nameof(Summary));
-            OnPropertyChanged(nameof(CreatedAt));
-            OnPropertyChanged(nameof(CanBeDecided));
-        }
     }
 }

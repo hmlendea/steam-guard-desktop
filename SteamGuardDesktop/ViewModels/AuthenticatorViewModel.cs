@@ -13,8 +13,6 @@ namespace SteamGuardDesktop.ViewModels
     /// </summary>
     public sealed partial class AuthenticatorViewModel : ViewModelBase
     {
-        private static TimeSpan CodeLifetime => TimeSpan.FromSeconds(30);
-
         private readonly IOtpCodeGenerator otpCodeGenerator;
 
         private readonly IClock clock;
@@ -51,6 +49,11 @@ namespace SteamGuardDesktop.ViewModels
         public bool HasCode => !string.IsNullOrWhiteSpace(CurrentCode);
 
         /// <summary>
+        /// Gets the moment at which the displayed code expires, or <c>null</c> when no code is displayed.
+        /// </summary>
+        public DateTimeOffset? ExpiresAt { get; private set; }
+
+        /// <summary>
         /// Generates a code for the specified shared secret.
         /// </summary>
         /// <param name="sharedSecret">The Base32 shared secret of the account.</param>
@@ -63,6 +66,7 @@ namespace SteamGuardDesktop.ViewModels
                 CurrentCode = string.Empty;
                 RemainingSeconds = 0;
                 HasSecretProblem = true;
+                ExpiresAt = null;
                 OnPropertyChanged(nameof(HasCode));
 
                 return;
@@ -70,18 +74,39 @@ namespace SteamGuardDesktop.ViewModels
 
             CurrentCode = code.Value;
             HasSecretProblem = false;
-            UpdateCountdown(code.ExpiresAt);
+            ExpiresAt = code.ExpiresAt;
+            UpdateCountdown();
             OnPropertyChanged(nameof(HasCode));
         }
 
         /// <summary>
         /// Updates the remaining validity of the displayed code.
         /// </summary>
-        /// <param name="expiry">The moment at which the displayed code expires.</param>
-        public void UpdateCountdown(DateTimeOffset expiry)
+        public void UpdateCountdown()
         {
-            TimeSpan remaining = expiry - clock.GetUtcNow();
+            if (ExpiresAt is null)
+            {
+                RemainingSeconds = 0;
+
+                return;
+            }
+
+            TimeSpan remaining = ExpiresAt.Value - clock.GetUtcNow();
             RemainingSeconds = remaining.TotalSeconds > 0 ? (int)Math.Ceiling(remaining.TotalSeconds) : 0;
+        }
+
+        /// <summary>
+        /// Determines whether the displayed code has expired.
+        /// </summary>
+        /// <returns><c>true</c> when a code is displayed and it has expired.</returns>
+        public bool HasExpired()
+        {
+            if (ExpiresAt is null)
+            {
+                return false;
+            }
+
+            return clock.GetUtcNow() >= ExpiresAt.Value;
         }
 
         /// <summary>
@@ -93,6 +118,7 @@ namespace SteamGuardDesktop.ViewModels
             RemainingSeconds = 0;
             HasClockWarning = false;
             HasSecretProblem = false;
+            ExpiresAt = null;
             OnPropertyChanged(nameof(HasCode));
         }
 
@@ -106,11 +132,6 @@ namespace SteamGuardDesktop.ViewModels
 
             HasClockWarning = driftReport.RequiresAttention;
         }
-
-        /// <summary>
-        /// Gets the lifetime of a generated code.
-        /// </summary>
-        public static TimeSpan GetCodeLifetime() => CodeLifetime;
 
         /// <inheritdoc />
         partial void OnCurrentCodeChanged(string value) => OnPropertyChanged(nameof(HasCode));

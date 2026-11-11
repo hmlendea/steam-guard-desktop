@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SteamGuardDesktop.ViewModels"
+        xmlns:automation="using:Avalonia.Automation"
         x:Class="SteamGuardDesktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Steam Guard Desktop"
@@ -24,10 +25,22 @@
                  TextWrapping="Wrap" />
     </Border>
 
-    <TextBlock DockPanel.Dock="Top"
-               Margin="{DynamicResource PagePadding}"
-               FontSize="20"
-               Text="Steam Guard Desktop" />
+    <StackPanel DockPanel.Dock="Top"
+                Margin="{DynamicResource PagePadding}"
+                Orientation="Horizontal"
+                Spacing="8">
+      <TextBlock VerticalAlignment="Center"
+                 FontSize="20"
+                 Text="Steam Guard Desktop" />
+      <ComboBox x:Name="ThemeSelector"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="Theme preference"
+                SelectionChanged="OnThemePreferenceChanged" />
+      <Button Content="Reveal account"
+              IsVisible="{Binding AreAccountDetailsConcealed}"
+              AutomationProperties.Name="Reveal concealed account details"
+              Click="OnToggleAccountVisibilityClick" />
+    </StackPanel>
 
     <Grid ColumnDefinitions="Auto,*">
       <StackPanel Grid.Column="0"
@@ -37,7 +50,8 @@
         <TextBlock Text="Accounts" />
 
         <ListBox ItemsSource="{Binding Accounts}"
-                 SelectedItem="{Binding SelectedAccount}">
+                 SelectedItem="{Binding SelectedAccount}"
+                 AutomationProperties.Name="Configured accounts">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:AccountItemViewModel">
               <StackPanel Spacing="2">
@@ -63,8 +77,10 @@
                     Margin="{DynamicResource PagePadding}">
         <StackPanel Spacing="12">
           <TextBlock Text="{Binding Authenticator.CurrentCode}"
+                     AutomationProperties.Name="Current Steam Guard code"
                      FontSize="{DynamicResource CodeDisplayFontSize}" />
-          <TextBlock Text="{Binding Authenticator.RemainingSeconds}" />
+          <TextBlock Text="{Binding Authenticator.RemainingSeconds}"
+                     AutomationProperties.Name="Seconds remaining for the current code" />
           <TextBlock Text="The system clock differs from the Steam clock."
                      IsVisible="{Binding Authenticator.HasClockWarning}"
                      TextWrapping="Wrap" />
@@ -74,10 +90,14 @@
           <TextBlock Text="The credential store is unavailable."
                      IsVisible="{Binding IsSecretStoreUnavailable}"
                      TextWrapping="Wrap" />
+          <TextBlock Text="Account details are hidden while the window is inactive."
+                     IsVisible="{Binding AreAccountDetailsConcealed}"
+                     TextWrapping="Wrap" />
 
           <TextBlock Text="Pending confirmations" />
 
-          <ListBox ItemsSource="{Binding Confirmations}"
+          <ListBox AutomationProperties.Name="Pending confirmations"
+                   ItemsSource="{Binding Confirmations}"
                    SelectedItem="{Binding SelectedConfirmation}"
                    MaxHeight="220">
             <ListBox.ItemTemplate>
@@ -94,8 +114,17 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
+          <TextBlock Text="{Binding ConfirmationDetails}"
+                     IsVisible="{Binding HasConfirmationDetails}"
+                     TextWrapping="Wrap" />
+
           <StackPanel Orientation="Horizontal"
                       Spacing="8">
+            <TextBlock VerticalAlignment="Center"
+                       FontSize="{DynamicResource StatusFontSize}"
+                       Text="{Binding SelectedConfirmation.CreatedAtDisplay}" />
+            <Button Content="Show details"
+                    Click="OnShowDetailsClick" />
             <Button Content="Approve"
                     Click="OnApproveClick" />
             <Button Content="Deny"
@@ -110,19 +139,25 @@
                    Text="{Binding AccountSetup.Label}" />
           <TextBox Watermark="Shared secret"
                    Text="{Binding AccountSetup.SharedSecret}"
-                   PasswordChar="*" />
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
           <TextBox Watermark="Identity secret"
                    Text="{Binding AccountSetup.IdentitySecret}"
-                   PasswordChar="*" />
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
           <TextBox Watermark="Revocation code"
                    Text="{Binding AccountSetup.RevocationCode}"
-                   PasswordChar="*" />
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
           <TextBox Watermark="Access token"
                    Text="{Binding AccountSetup.AccessToken}"
-                   PasswordChar="*" />
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
 
-          <Button Content="Save account"
-                  Click="OnSaveAccountClick" />
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8">
+            <Button Content="Save account"
+                    Click="OnSaveAccountClick" />
+            <Button Content="Reveal secrets"
+                    IsVisible="{Binding AccountSetup.IsSecretRevealAllowed}"
+                    Click="OnToggleSecretVisibilityClick" />
+          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Grid>

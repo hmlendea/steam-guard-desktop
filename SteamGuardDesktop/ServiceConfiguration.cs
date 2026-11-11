@@ -55,8 +55,10 @@ namespace SteamGuardDesktop
             services.AddSingleton(CreateLogger(diagnosticsSettings));
 
             services.AddSingleton<IClock, SystemClock>();
+            services.AddSingleton<ITicker, AvaloniaTicker>();
             services.AddSingleton<ISecretRedactor, SecretRedactor>();
             services.AddSingleton<IPlatformThemeResolver, PlatformThemeResolver>();
+            services.AddSingleton<ISystemAccentColourProvider, SystemAccentColourProvider>();
             services.AddSingleton<IThemeService, ThemeService>();
 
             services.AddSingleton<ISteamGuard, TOTPSteamGuard>();
@@ -81,6 +83,7 @@ namespace SteamGuardDesktop
             services.AddSingleton<IConfirmationService, ConfirmationService>();
             services.AddSingleton<HttpClient>(_ => CreateHttpClient(settings));
             services.AddSingleton<ISteamConfirmationClient, SteamConfirmationClient>();
+            services.AddSingleton<IClockDriftService, ClockDriftService>();
 
             services.AddSingleton<IClipboardWriter, AvaloniaClipboardWriter>();
             services.AddSingleton<AuthenticatorViewModel>();

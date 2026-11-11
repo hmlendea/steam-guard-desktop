@@ -2,6 +2,7 @@ using System;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using SteamGuardDesktop.Configuration;
 using SteamGuardDesktop.Domain.Account;
 using SteamGuardDesktop.Domain.Authenticator;
 
@@ -12,6 +13,8 @@ namespace SteamGuardDesktop.ViewModels
     /// </summary>
     public sealed partial class AccountSetupViewModel : ObservableObject
     {
+        private readonly SteamGuardSettings settings;
+
         [ObservableProperty]
         private string steamIdentifier = string.Empty;
 
@@ -30,10 +33,29 @@ namespace SteamGuardDesktop.ViewModels
         [ObservableProperty]
         private string accessToken = string.Empty;
 
+        [ObservableProperty]
+        private bool areSecretsRevealed;
+
         /// <summary>
-        /// Gets a value indicating whether the entered secrets are currently visible.
+        /// Initialises a new instance of the <see cref="AccountSetupViewModel"/> class.
         /// </summary>
-        public bool AreSecretsVisible { get; private set; }
+        /// <param name="settings">The application settings.</param>
+        public AccountSetupViewModel(SteamGuardSettings settings)
+        {
+            ArgumentNullException.ThrowIfNull(settings, nameof(settings));
+
+            this.settings = settings;
+        }
+
+        /// <summary>
+        /// Gets the character that conceals a secret when it is not revealed.
+        /// </summary>
+        public char SecretMaskCharacter => AreSecretsRevealed ? '\0' : '*';
+
+        /// <summary>
+        /// Gets a value indicating whether the reveal action is available.
+        /// </summary>
+        public bool IsSecretRevealAllowed => settings.IsSecretRevealAllowed;
 
         /// <summary>
         /// Builds the account metadata described by the form.
@@ -68,15 +90,23 @@ namespace SteamGuardDesktop.ViewModels
             IdentitySecret = string.Empty;
             RevocationCode = string.Empty;
             AccessToken = string.Empty;
+            AreSecretsRevealed = false;
         }
 
         /// <summary>
-        /// Toggles the visibility of the entered secrets.
+        /// Toggles the visibility of the entered secrets when the reveal preference allows it.
         /// </summary>
         public void ToggleSecretVisibility()
         {
-            AreSecretsVisible = !AreSecretsVisible;
-            OnPropertyChanged(nameof(AreSecretsVisible));
+            if (!settings.IsSecretRevealAllowed)
+            {
+                return;
+            }
+
+            AreSecretsRevealed = !AreSecretsRevealed;
         }
+
+        /// <inheritdoc />
+        partial void OnAreSecretsRevealedChanged(bool value) => OnPropertyChanged(nameof(SecretMaskCharacter));
     }
 }

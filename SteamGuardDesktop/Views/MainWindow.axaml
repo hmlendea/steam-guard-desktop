@@ -158,6 +158,58 @@
                     IsVisible="{Binding AccountSetup.IsSecretRevealAllowed}"
                     Click="OnToggleSecretVisibilityClick" />
           </StackPanel>
+
+          <TextBlock Text="Sign in and authenticator recovery" />
+
+          <TextBox Watermark="Account name"
+                   Text="{Binding Recovery.AccountName}" />
+          <TextBox Watermark="Password"
+                   Text="{Binding Recovery.Password}"
+                   PasswordChar="*" />
+          <Button Content="Sign in"
+                  Click="OnBeginSignInClick" />
+
+          <TextBlock Text="{Binding Recovery.GuardMessage}"
+                     IsVisible="{Binding Recovery.IsSignInStarted}"
+                     TextWrapping="Wrap" />
+          <TextBox Watermark="Guard code"
+                   IsVisible="{Binding Recovery.IsCodeRequired}"
+                   Text="{Binding Recovery.GuardCode}" />
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      IsVisible="{Binding Recovery.IsSignInStarted}">
+            <Button Content="Submit code"
+                    IsVisible="{Binding Recovery.IsCodeRequired}"
+                    Click="OnSubmitGuardCodeClick" />
+            <Button Content="Complete sign-in"
+                    Click="OnCompleteSignInClick" />
+          </StackPanel>
+
+          <TextBlock Text="Authenticator"
+                     IsVisible="{Binding Recovery.IsGuardSubmitted}" />
+          <TextBox Watermark="Revocation code"
+                   IsVisible="{Binding Recovery.IsGuardSubmitted}"
+                   Text="{Binding Recovery.RecoveryCode}"
+                   PasswordChar="*" />
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      IsVisible="{Binding Recovery.IsGuardSubmitted}">
+            <Button Content="Check status"
+                    Click="OnCheckAuthenticatorStatusClick" />
+            <Button Content="Remove authenticator"
+                    Click="OnRemoveAuthenticatorClick" />
+            <Button Content="Enrol authenticator"
+                    Click="OnEnrolAuthenticatorClick" />
+            <Button Content="Activate authenticator"
+                    Click="OnFinalizeAuthenticatorClick" />
+          </StackPanel>
+
+          <TextBox Watermark="SMS code"
+                   IsVisible="{Binding Recovery.IsRecoveringLostDevice}"
+                   Text="{Binding Recovery.SmsCode}" />
+          <Button Content="Recover lost device"
+                  IsVisible="{Binding Recovery.IsRecoveringLostDevice}"
+                  Click="OnRecoverLostDeviceClick" />
         </StackPanel>
       </ScrollViewer>
     </Grid>

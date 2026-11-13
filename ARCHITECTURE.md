@@ -115,6 +115,9 @@ The principal runtime sequence is:
 | `PlatformThemeResolver` | Resolves the platform theme from a host description | None | Singleton |
 | `ThemeService` | Applies the requested theme variant and reports the resolved theme and accent colour | `IPlatformThemeResolver`, `ISystemAccentColourProvider` | Singleton |
 | `ClockDriftService` | Compares the local clock with the Steam server clock | `ISteamConfirmationClient`, `IClock` | Singleton |
+| `LoginService` | Coordinates the sign-in exchange without persisting the password | `ISteamAuthenticationClient`, `IPasswordEncryptor` | Singleton |
+| `AuthenticatorManagementService` | Enrols, inspects, removes, and recovers the authenticator | `ISteamAuthenticationClient`, `IDeviceIdentityProvider`, `IOtpCodeGenerator` | Singleton |
+| `SteamAuthenticationClient` | Performs the sign-in and two-factor requests and interprets their responses | `HttpClient`, `ISteamRequestPayloadBuilder`, `ISteamResponseParser` | Singleton |
 | `AvaloniaTicker` | Signals once per second so that the countdown can update | Avalonia dispatcher | Singleton |
 
 ## 🗂️ Architectural Areas
@@ -226,10 +229,46 @@ flowchart LR
 | `/mobileconf/getlist` | Outbound | HTTPS GET with signed parameters `p`, `a`, `k`, `t`, `m`, `tag` | Valve | `needauth` produces a re-authentication result; other failures produce a safe reason |
 | `/mobileconf/ajaxop` | Outbound | HTTPS GET with signed parameters plus `op`, `cid`, and `ck` | Valve | `needsauth` produces a re-authentication result; other failures produce a safe reason |
 | `/mobileconf/details/{id}` | Outbound | HTTPS GET with signed parameters using the `details` tag | Valve | A rejected request produces a safe reason; the HTML fragment is reduced to plain text |
+| `/IAuthenticationService/*` | Outbound | HTTPS GET and POST carrying a protobuf-JSON `input_json` payload | Valve | Credential failures return the message reported by Steam; transport failures produce a safe reason |
+| `/ITwoFactorService/*` | Outbound | HTTPS POST carrying a protobuf-JSON `input_json` payload, authorised with a bearer access token | Valve | Rejected authenticator operations produce a safe reason |
 | `INativeSecretBackend` | Local | Credential read, write, and delete by entry name | Application and operating system | Unavailable stores are reported to the caller |
 | `IPlatformThemeResolver` | Local | Pure function from host description to platform theme | Application | Unidentified environments resolve to the documented fallback |
 
 ## 🔀 Key Processes
+
+### Sign-In and Authenticator Recovery
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant ViewModel as RecoveryViewModel
+    participant Login as LoginService
+    participant Management as AuthenticatorManagementService
+    participant Client as SteamAuthenticationClient
+    participant Steam
+    User->>ViewModel: Account name and password
+    ViewModel->>Login: BeginLogin(credentials)
+    Login->>Client: GetPasswordRsaKey
+    Client->>Steam: GetPasswordRSAPublicKey
+    Steam-->>Client: Modulus, exponent, timestamp
+    Login->>Login: Encrypt password with the RSA key
+    Login->>Client: BeginCredentialSession
+    Client->>Steam: BeginAuthSessionViaCredentials
+    Steam-->>Client: Client id, request id, accepted guards
+    User->>ViewModel: Guard code
+    ViewModel->>Login: SubmitGuardCode(challenge, code, guard type)
+    Client->>Steam: UpdateAuthSessionWithSteamGuardCode
+    ViewModel->>Login: CompleteLogin(challenge)
+    Login->>Client: PollSession
+    Client->>Steam: PollAuthSessionStatus
+    Steam-->>Client: Access token and refresh token
+    ViewModel->>Management: AddAuthenticator or RecoverAuthenticator
+    Management->>Client: Two-factor request with the bearer token
+    Steam-->>Client: Authenticator secrets
+    ViewModel->>Management: CreateSecrets
+```
+
+The password is encrypted with the RSA public key that Steam publishes, is used only for the exchange, and is cleared from the form as soon as the sign-in starts. Recovery of a device that is no longer available is issued through the challenge endpoints rather than the revocation code, and the issued authenticator is stored with the same secret store that a manual account setup uses.
 
 ### Code Generation
 
@@ -354,7 +393,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, theme resolution, accent colour reading, HTML-to-text conversion, secret redaction, and account validation. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, and source-file conventions.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, theme resolution, accent colour reading, HTML-to-text conversion, secret redaction, password encryption, request payload construction, and account validation. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, and source-file conventions.
 
 Execute the principal automated verification with:
 
@@ -364,8 +403,8 @@ dotnet test SteamGuardDesktop.slnx
 
 ## ⚠️ Design Constraints
 
-- **Manual session material:** The application does not implement a Steam login flow, so the Steam access token must be supplied during account setup.
-- **Protocol dependency:** Confirmation behaviour depends on current Steam endpoints and response shapes; unknown confirmation types are deliberately not actionable.
+- **Encrypted session material:** The Steam access token is obtained by signing in or supplied during account setup. The password is used only for the RSA-encrypted exchange and is never persisted.
+- **Protocol dependency:** Sign-in, confirmation, and authenticator behaviour depend on current Steam endpoints and response shapes; unknown confirmation types are deliberately not actionable.
 - **Fallback storage:** When no native credential store is available, secrets are encrypted with a key derived from machine and user identifiers, which is weaker than a hardware-backed store.
 - **Single assembly:** The layers are enforced by architecture tests rather than project boundaries.
 

@@ -78,6 +78,7 @@ namespace SteamGuardDesktop.ViewModels
         /// <param name="confirmationService">The service that coordinates the confirmations.</param>
         /// <param name="authenticatorViewModel">The authenticator view model.</param>
         /// <param name="accountSetupViewModel">The account setup view model.</param>
+        /// <param name="recoveryViewModel">The sign-in and authenticator recovery view model.</param>
         /// <param name="clipboardWriter">The clipboard writer of the host platform.</param>
         /// <param name="themeService">The platform theme service.</param>
         /// <param name="clockDriftService">The service that compares the local clock with the Steam clock.</param>
@@ -89,6 +90,7 @@ namespace SteamGuardDesktop.ViewModels
             IConfirmationService confirmationService,
             AuthenticatorViewModel authenticatorViewModel,
             AccountSetupViewModel accountSetupViewModel,
+            RecoveryViewModel recoveryViewModel,
             IClipboardWriter clipboardWriter,
             IThemeService themeService,
             IClockDriftService clockDriftService,
@@ -100,6 +102,7 @@ namespace SteamGuardDesktop.ViewModels
             ArgumentNullException.ThrowIfNull(confirmationService, nameof(confirmationService));
             ArgumentNullException.ThrowIfNull(authenticatorViewModel, nameof(authenticatorViewModel));
             ArgumentNullException.ThrowIfNull(accountSetupViewModel, nameof(accountSetupViewModel));
+            ArgumentNullException.ThrowIfNull(recoveryViewModel, nameof(recoveryViewModel));
             ArgumentNullException.ThrowIfNull(clipboardWriter, nameof(clipboardWriter));
             ArgumentNullException.ThrowIfNull(themeService, nameof(themeService));
             ArgumentNullException.ThrowIfNull(clockDriftService, nameof(clockDriftService));
@@ -118,6 +121,7 @@ namespace SteamGuardDesktop.ViewModels
 
             Authenticator = authenticatorViewModel;
             AccountSetup = accountSetupViewModel;
+            Recovery = recoveryViewModel;
             ThemePreference = settings.ThemePreference;
             themeService.ApplyTheme(settings.ThemePreference);
             ticker.Tick += OnTickerTick;
@@ -142,6 +146,11 @@ namespace SteamGuardDesktop.ViewModels
         /// Gets the account setup view model.
         /// </summary>
         public AccountSetupViewModel AccountSetup { get; }
+
+        /// <summary>
+        /// Gets the sign-in and authenticator recovery view model.
+        /// </summary>
+        public RecoveryViewModel Recovery { get; }
 
         /// <summary>
         /// Gets a value indicating whether at least one account is configured.

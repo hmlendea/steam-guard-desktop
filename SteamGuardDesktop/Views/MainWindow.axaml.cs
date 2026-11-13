@@ -63,6 +63,30 @@ namespace SteamGuardDesktop.Views
         private void OnToggleSecretVisibilityClick(object? sender, RoutedEventArgs arguments)
             => ViewModel?.AccountSetup.ToggleSecretVisibility();
 
+        private void OnBeginSignInClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.BeginSignIn();
+
+        private void OnSubmitGuardCodeClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.SubmitGuardCode();
+
+        private void OnCompleteSignInClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.CompleteSignIn();
+
+        private void OnCheckAuthenticatorStatusClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.StartLostDeviceRecovery();
+
+        private void OnRemoveAuthenticatorClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.RemoveAuthenticatorWithRevocationCode();
+
+        private void OnEnrolAuthenticatorClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.EnrolAuthenticator();
+
+        private void OnFinalizeAuthenticatorClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.FinalizeAuthenticator();
+
+        private void OnRecoverLostDeviceClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.RecoverLostDevice();
+
         private void OnThemePreferenceChanged(object? sender, SelectionChangedEventArgs arguments)
         {
             if (ThemeSelector.SelectedItem is not ThemePreference selectedPreference)

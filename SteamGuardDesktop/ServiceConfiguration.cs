@@ -17,6 +17,7 @@ using SteamGuardDesktop.Service.Account;
 using SteamGuardDesktop.Service.Authenticator;
 using SteamGuardDesktop.Service.Confirmations;
 using SteamGuardDesktop.Service.Diagnostics;
+using SteamGuardDesktop.Service.Login;
 using SteamGuardDesktop.Service.Platform;
 using SteamGuardDesktop.Service.Storage;
 using SteamGuardDesktop.Service.Theming;
@@ -85,9 +86,16 @@ namespace SteamGuardDesktop
             services.AddSingleton<ISteamConfirmationClient, SteamConfirmationClient>();
             services.AddSingleton<IClockDriftService, ClockDriftService>();
 
+            services.AddSingleton<IPasswordEncryptor, PasswordEncryptor>();
+            services.AddSingleton<ISteamRequestPayloadBuilder, SteamRequestPayloadBuilder>();
+            services.AddSingleton<ILoginService, LoginService>();
+            services.AddSingleton<IAuthenticatorManagementService, AuthenticatorManagementService>();
+            services.AddSingleton<ISteamAuthenticationClient, SteamAuthenticationClient>();
+
             services.AddSingleton<IClipboardWriter, AvaloniaClipboardWriter>();
             services.AddSingleton<AuthenticatorViewModel>();
             services.AddSingleton<AccountSetupViewModel>();
+            services.AddSingleton<RecoveryViewModel>();
             services.AddSingleton<MainViewModel>();
 
             return services.BuildServiceProvider();

@@ -51,6 +51,10 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - Lists pending Steam mobile confirmations with type, creation time, headline, and safe context.
 - Approves or denies an individual confirmation and refreshes the list afterwards.
 - Stores account secrets in the platform credential store and removes them with the account.
+- Signs in to Steam with an account name and password, exchanging the password over an RSA-encrypted request without persisting it.
+- Enrols a Steam Mobile Authenticator and finalises the enrolment with the code that Steam issues.
+- Removes an existing authenticator with its revocation code.
+- Recovers access when the device that held Steam Guard is no longer available.
 - Follows the platform theme on Windows, macOS, GNOME, and KDE, with a documented fallback.
 
 ## 🎯 Use Cases
@@ -58,10 +62,13 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - **Desktop two-factor access:** Read the current Steam Guard code on a computer without reaching for a phone.
 - **Confirmation review:** Inspect and decide on pending trades, market sales, and account changes from the desktop.
 - **Multi-account management:** Keep several labelled accounts and switch between them.
+- **Lost-device recovery:** Regain access when the phone that held Steam Guard is no longer available.
 
 ## 🚀 Usage
 
 Add an account with its Steam ID 64, shared secret, identity secret, and Steam access token, then select it in the account list. The authenticator panel displays the current code and its countdown; copying the code places it on the clipboard. Refreshing the confirmation list retrieves the pending confirmations, and the approve and deny actions apply a decision to the selected confirmation after an explicit user action.
+
+An account can also be provisioned by signing in with its account name and password. The sign-in accepts the guard code that Steam sends, and the resulting session can enrol a new authenticator, remove an existing one with its revocation code, or recover access when the device that held Steam Guard is no longer available. The password is used only for the encrypted exchange and is never stored.
 
 ```bash
 dotnet run --project SteamGuardDesktop
@@ -69,10 +76,10 @@ dotnet run --project SteamGuardDesktop
 
 ## ⚠️ Known Limitations
 
-- The application does not implement a Steam login flow, so the Steam access token must be supplied during account setup.
 - Only confirmation types that Steam reports with a known numeric identifier can be approved or denied; unknown types are listed but not actionable.
 - When the platform credential store is unavailable, secrets are kept in an encrypted file whose key is derived from machine and user identifiers, which is weaker than a hardware-backed store.
 - Steam protocol behaviour is validated against the current endpoints only; an endpoint change requires a client update.
+- Recovery of an authenticator on a device that is no longer available depends on the codes that Steam sends to the registered e-mail address, phone number, or authenticator.
 
 ## 🖥️ System Requirements
 
@@ -255,7 +262,9 @@ See [ROADMAP.md](./ROADMAP.md) for planned work and forthcoming changes.
 |---------|----------------|------------|
 | The authenticator panel shows no code | The stored shared secret is missing or not Base32 | Re-enter the shared secret for the account. |
 | A clock warning is displayed | The local clock differs from the Steam clock by more than 30 seconds | Synchronise the operating system clock. |
-| Confirmations cannot be loaded | The Steam access token is missing or expired | Re-enter a current access token for the account. |
+| Confirmations cannot be loaded | The Steam access token is missing or expired | Sign in again to obtain a current access token. |
+| The sign-in reports that the credentials are incorrect | The account name or password was mistyped | Check the credentials and start the sign-in again. |
+| The authenticator cannot be enrolled | Steam rejected the activation code or the SMS code was not accepted | Request a new code and complete the enrolment again. |
 | The credential store is reported as unavailable | The desktop session has no reachable Secret Service or Keychain | Unlock the session credential store or use a supported desktop session. |
 
 ## 🤝 Contributing

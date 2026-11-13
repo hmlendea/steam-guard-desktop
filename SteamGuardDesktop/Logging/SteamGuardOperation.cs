@@ -38,6 +38,46 @@ namespace SteamGuardDesktop.Logging
         public static Operation GenerateCode => new SteamGuardOperation(nameof(GenerateCode));
 
         /// <summary>
+        /// Gets the operation that starts a sign-in.
+        /// </summary>
+        public static Operation BeginLogin => new SteamGuardOperation(nameof(BeginLogin));
+
+        /// <summary>
+        /// Gets the operation that submits a guard code for a sign-in.
+        /// </summary>
+        public static Operation SubmitLoginGuard => new SteamGuardOperation(nameof(SubmitLoginGuard));
+
+        /// <summary>
+        /// Gets the operation that polls a sign-in for its tokens.
+        /// </summary>
+        public static Operation PollLoginSession => new SteamGuardOperation(nameof(PollLoginSession));
+
+        /// <summary>
+        /// Gets the operation that enrols an authenticator.
+        /// </summary>
+        public static Operation AddAuthenticator => new SteamGuardOperation(nameof(AddAuthenticator));
+
+        /// <summary>
+        /// Gets the operation that removes an authenticator.
+        /// </summary>
+        public static Operation RemoveAuthenticator => new SteamGuardOperation(nameof(RemoveAuthenticator));
+
+        /// <summary>
+        /// Gets the operation that recovers an authenticator whose device is unavailable.
+        /// </summary>
+        public static Operation RecoverAuthenticator => new SteamGuardOperation(nameof(RecoverAuthenticator));
+
+        /// <summary>
+        /// Gets the operation that reports the authenticator status of an account.
+        /// </summary>
+        public static Operation ReadAuthenticatorStatus => new SteamGuardOperation(nameof(ReadAuthenticatorStatus));
+
+        /// <summary>
+        /// Gets the operation that signs every other Steam session out of an account.
+        /// </summary>
+        public static Operation RemoveAllGuardCookies => new SteamGuardOperation(nameof(RemoveAllGuardCookies));
+
+        /// <summary>
         /// Gets the operation that loads pending confirmations.
         /// </summary>
         public static Operation LoadConfirmations => new SteamGuardOperation(nameof(LoadConfirmations));

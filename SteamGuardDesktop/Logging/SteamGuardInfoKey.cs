@@ -48,6 +48,16 @@ namespace SteamGuardDesktop.Logging
         public static LogInfoKey SteamOperation => new SteamGuardInfoKey(nameof(SteamOperation));
 
         /// <summary>
+        /// Gets the structured field that reports the guard accepted for a sign-in.
+        /// </summary>
+        public static LogInfoKey LoginGuard => new SteamGuardInfoKey(nameof(LoginGuard));
+
+        /// <summary>
+        /// Gets the structured field that reports whether an authenticator is attached.
+        /// </summary>
+        public static LogInfoKey HasMobileAuthenticator => new SteamGuardInfoKey(nameof(HasMobileAuthenticator));
+
+        /// <summary>
         /// Gets the structured field that reports the number of pending confirmations.
         /// </summary>
         public static LogInfoKey ConfirmationCount => new SteamGuardInfoKey(nameof(ConfirmationCount));

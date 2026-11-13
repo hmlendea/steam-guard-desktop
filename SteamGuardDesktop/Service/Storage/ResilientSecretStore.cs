@@ -3,20 +3,16 @@ namespace SteamGuardDesktop.Service.Storage
     /// <summary>
     /// Uses the platform credential store and falls back to an encrypted file when it is unavailable.
     /// </summary>
+    /// <remarks>
+    /// Availability describes the platform credential store, not the encrypted fallback, so a session whose
+    /// credential store cannot be reached reports unavailable while secrets are still kept in the fallback.
+    /// </remarks>
     public sealed class ResilientSecretStore(
         INativeSecretBackend nativeBackend,
         ISecretStore fallbackStore) : ISecretStore
     {
         /// <inheritdoc />
-        public SecretStoreAvailability GetAvailability()
-        {
-            if (nativeBackend.GetAvailability() == SecretStoreAvailability.Available)
-            {
-                return SecretStoreAvailability.Available;
-            }
-
-            return fallbackStore.GetAvailability();
-        }
+        public SecretStoreAvailability GetAvailability() => nativeBackend.GetAvailability();
 
         /// <inheritdoc />
         public SecretStoreResult Store(string entryName, string value)

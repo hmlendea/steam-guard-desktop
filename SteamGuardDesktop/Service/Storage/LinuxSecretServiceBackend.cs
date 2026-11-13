@@ -13,6 +13,8 @@ namespace SteamGuardDesktop.Service.Storage
 
         private static string LabelPrefix => "SteamGuardDesktop ";
 
+        private static string ReachabilityProbeMarker => "SteamGuardDesktopReachabilityProbe";
+
         /// <inheritdoc />
         protected override string ExecutableName => "secret-tool";
 
@@ -57,8 +59,23 @@ namespace SteamGuardDesktop.Service.Storage
             return output is not null && output.ExitCode == 0;
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A search for an attribute value that is never stored either reports no match while the Secret Service
+        /// answers, or fails when the service is unreachable, so no stored secret is read by the probe.
+        /// </remarks>
+        protected override bool IsStoreReachable()
+        {
+            ProcessOutput? output = Run(ComposeReachabilityArguments(), string.Empty);
+
+            return output is not null && output.ExitCode == 0;
+        }
+
         private static string ComposeLookupArguments(string entryName) =>
             $"lookup {AttributeName} {AttributeValue} account {Quote(entryName)}";
+
+        private static string ComposeReachabilityArguments() =>
+            $"search {AttributeName} {ReachabilityProbeMarker}";
 
         private static string ComposeStoreArguments(string entryName) =>
             $"store --label {Quote(LabelPrefix + entryName)} {AttributeName} {AttributeValue} account {Quote(entryName)}";

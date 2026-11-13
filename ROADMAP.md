@@ -31,7 +31,7 @@ The application is feature-complete and every automated check passes. The labour
 - Publish the first tagged release and confirm that the workflow attaches an archive for every supported runtime identifier.
 - Validate a generated code against the official Steam authenticator for the same time window.
 - Re-check the sign-in, confirmation, server-time, and confirmation-detail responses against a live session, now that the accepted-size limit is enforced while reading.
-- Probe the credential store for reachability rather than for the presence of its tool, so that a session with a present-but-unreachable store reports the truth instead of failing on every operation.
+- Confirm on macOS and Windows that a credential store which is present but unreachable is reported unavailable, as it now is on Linux.
 
 ### Next Quarter
 
@@ -51,14 +51,14 @@ The application is feature-complete and every automated check passes. The labour
 | Live account validation | Next 30 days | A generated code matches the official Steam authenticator for the same time window. | In Progress |
 | Release readiness | Next 30 days | `master` carries the current work and a published release attaches an archive for every supported runtime identifier. | In Progress |
 | Platform credential validation | Next quarter | Verified secret storage on macOS and Windows, after Linux. | In Progress |
-| Credential store capability probe | Next 30 days | A session whose credential store is present but unreachable is reported as unavailable instead of failing on every write. | Planned |
+| Credential store capability probe | Next 30 days | A session whose credential store is present but unreachable is reported as unavailable instead of failing on every write. | Complete |
 
 ## ⚠️ Dependencies and Risks
 
 - Branch divergence - The release workflow, README links, and badges target `master`, which lags `dev`, so a tag placed on `master` would package older work - Merge `dev` into `master` before the first release and place each tag on `master`.
 - Steam protocol endpoints - A change to the sign-in, confirmation, or authenticator endpoints breaks the corresponding feature - Keep every protocol isolated behind a client and cover it with integration tests.
 - Unverified live endpoints - Only the credential sign-in key exchange has been exercised against Steam; every other response shape is verified against a scripted handler alone - Re-check each endpoint against a live session before the first release.
-- Credential store reported as available but unreachable - Availability is decided by whether the credential utility exists on disk, so a session without an unlocked keyring (for example a remote shell) reports available and then fails every write - Probe the store for reachability and report the true state.
+- Credential store reachability on macOS and Windows - The reachability probe is exercised on Linux only, because the development environment has no macOS or Windows host - Confirm the probe on both platforms before the first release.
 - Encrypted fallback is machine-bound - The fallback key is derived from the machine and user identifiers, so a copied or renamed profile cannot be decrypted and its accounts must be added again - An unreadable file is moved to a `.unreadable` sibling at startup and the constraint is documented.
 - Unsigned release artefacts - The release script produces unsigned archives, so hosts report an unknown publisher - Publish a checksum beside each archive and document the verification step for users.
 - Shared release script - Release packaging depends on a remotely hosted script that can change independently of this repository - The workflow and `release.sh` currently name two different upstream URLs that serve byte-identical content; keep both verified against each other.

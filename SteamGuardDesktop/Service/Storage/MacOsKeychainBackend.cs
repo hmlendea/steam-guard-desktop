@@ -11,6 +11,10 @@ namespace SteamGuardDesktop.Service.Storage
 
         private static string AccountPrefix => "SteamGuardDesktop:";
 
+        private static string ReachabilityProbeMarker => "SteamGuardDesktopReachabilityProbe";
+
+        private static int ErrorItemNotFound => 44;
+
         /// <inheritdoc />
         protected override string ExecutableName => "security";
 
@@ -55,6 +59,24 @@ namespace SteamGuardDesktop.Service.Storage
             ProcessOutput? output = Run(ComposeDeleteArguments(entryName), string.Empty);
 
             return output is not null;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// A lookup of an entry that is never stored reports that the item was not found while the Keychain
+        /// answers, and fails with any other status when the Keychain cannot be used, so no stored secret is read
+        /// by the probe.
+        /// </remarks>
+        protected override bool IsStoreReachable()
+        {
+            ProcessOutput? output = Run(ComposeLookupArguments(ReachabilityProbeMarker), string.Empty);
+
+            if (output is null)
+            {
+                return false;
+            }
+
+            return output.ExitCode == 0 || output.ExitCode == ErrorItemNotFound;
         }
 
         private static string ComposeLookupArguments(string entryName) =>

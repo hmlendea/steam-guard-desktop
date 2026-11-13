@@ -19,8 +19,18 @@ namespace SteamGuardDesktop.Service.Storage
 
         private static int ErrorNotFound => 1168;
 
+        private static string ReachabilityProbeEntryName => "ReachabilityProbe";
+
         /// <inheritdoc />
-        public SecretStoreAvailability GetAvailability() => SecretStoreAvailability.Available;
+        public SecretStoreAvailability GetAvailability()
+        {
+            if (IsStoreReachable())
+            {
+                return SecretStoreAvailability.Available;
+            }
+
+            return SecretStoreAvailability.Unavailable;
+        }
 
         /// <inheritdoc />
         public string? Read(string entryName)
@@ -101,6 +111,29 @@ namespace SteamGuardDesktop.Service.Storage
         }
 
         private static string ComposeTargetName(string entryName) => $"{CredentialNamespace}:{entryName}";
+
+        /// <summary>
+        /// Determines whether the Credential Manager answers a read for an entry that is never stored, so that a
+        /// session without a usable Credential Manager is reported as unavailable.
+        /// </summary>
+        /// <returns><c>true</c> when the Credential Manager answered the read.</returns>
+        private static bool IsStoreReachable()
+        {
+            bool wasRead = CredRead(
+                ComposeTargetName(ReachabilityProbeEntryName),
+                CredentialTypeGeneric,
+                0,
+                out IntPtr credentialPointer);
+
+            if (wasRead)
+            {
+                CredFree(credentialPointer);
+
+                return true;
+            }
+
+            return Marshal.GetLastWin32Error() == ErrorNotFound;
+        }
 
         [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool CredRead(string target, int type, int reservedFlag, out IntPtr credentialPointer);

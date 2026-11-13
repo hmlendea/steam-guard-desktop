@@ -82,6 +82,7 @@ dotnet run --project SteamGuardDesktop
 
 - Only confirmation types that Steam reports with a known numeric identifier can be approved or denied; unknown types are listed but not actionable.
 - When the platform credential store is unavailable, secrets are kept in an encrypted file whose key is derived from machine and user identifiers, which is weaker than a hardware-backed store.
+- The platform credential store is reported as unavailable unless it answers a query, so a session whose credential utility is installed but whose keyring cannot be reached (for example a remote shell) is reported truthfully and its secrets use the encrypted fallback.
 - The encrypted files cannot be read on another machine or after a user rename. An unreadable file is moved to a `.unreadable` sibling at startup so that the application still starts with empty state, and it must be removed before its secrets can be used again.
 - When the data directory cannot be written, saving an account, a secret, or a preference reports the failure instead of crashing; the in-memory state is rolled back so that it never disagrees with what is on disk.
 - Steam protocol behaviour is validated against the current endpoints only; an endpoint change requires a client update.

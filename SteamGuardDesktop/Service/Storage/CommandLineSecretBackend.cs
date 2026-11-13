@@ -21,6 +21,11 @@ namespace SteamGuardDesktop.Service.Storage
                 return SecretStoreAvailability.Unavailable;
             }
 
+            if (!IsStoreReachable())
+            {
+                return SecretStoreAvailability.Unavailable;
+            }
+
             return SecretStoreAvailability.Available;
         }
 
@@ -32,6 +37,13 @@ namespace SteamGuardDesktop.Service.Storage
 
         /// <inheritdoc />
         public abstract bool Delete(string entryName);
+
+        /// <summary>
+        /// Determines whether the credential store answers a query, so that a store whose utility is present but
+        /// whose backing service cannot be reached is reported as unavailable.
+        /// </summary>
+        /// <returns><c>true</c> when the credential store responded to a query.</returns>
+        protected abstract bool IsStoreReachable();
 
         /// <summary>
         /// Runs the credential store utility with the specified arguments.

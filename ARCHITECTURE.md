@@ -178,11 +178,12 @@ Paths:
 Responsibilities:
 - Persist encrypted account metadata and store named secrets in the platform credential store.
 - Fall back to an encrypted file only when the native store is unavailable.
+- Decide native-store availability by probing the store for a response rather than by the mere presence of its utility, so that a store that is present but unreachable is reported as unavailable.
 - Move an encrypted file that can no longer be decrypted aside at startup so that the application starts with empty state instead of failing.
 
 Boundary rules:
 - Must never persist a secret in plain text.
-- Must report unavailability instead of silently discarding a secret.
+- Must report unavailability instead of silently discarding a secret, and the availability reported to the caller reflects the native store rather than the encrypted fallback.
 - Must never lose a protected file silently: an unreadable file is preserved beside the original.
 - Must translate a storage failure into its result type and roll the in-memory state back, so that a read-only or full disk never crashes the application and never leaves state that disagrees with the file.
 
@@ -233,7 +234,7 @@ flowchart LR
 | `/mobileconf/details/{id}` | Outbound | HTTPS GET with signed parameters using the `details` tag | Valve | A rejected request produces a safe reason; the HTML fragment is reduced to plain text |
 | `/IAuthenticationService/*` | Outbound | HTTPS GET and POST carrying a protobuf-JSON `input_json` payload | Valve | Credential failures return the message reported by Steam; transport failures produce a safe reason |
 | `/ITwoFactorService/*` | Outbound | HTTPS POST carrying a protobuf-JSON `input_json` payload, authorised with a bearer access token | Valve | Rejected authenticator operations produce a safe reason |
-| `INativeSecretBackend` | Local | Credential read, write, and delete by entry name | Application and operating system | Unavailable stores are reported to the caller |
+| `INativeSecretBackend` | Local | Availability probe, then credential read, write, and delete by entry name | Application and operating system | A store that cannot be reached is reported as unavailable, and the encrypted fallback keeps the secret |
 
 ## 🔀 Key Processes
 
@@ -398,7 +399,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, the recovery of a protected file that can no longer be decrypted, the rejection of a response that exceeds the accepted size before it is buffered, and the containment of a write that the host refuses. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, credential-store availability and fallback selection, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, the recovery of a protected file that can no longer be decrypted, the rejection of a response that exceeds the accepted size before it is buffered, and the containment of a write that the host refuses. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
 
 Execute the principal automated verification with:
 
@@ -429,7 +430,7 @@ Feature views must never hard-code colours, fonts, or control sizes, so that the
 2. Return the new backend from `NativeSecretBackendFactory`.
 3. Add integration tests for the read, write, and delete contract.
 
-The backend must never return a secret through diagnostics and must report unavailability instead of silently failing.
+The backend must never return a secret through diagnostics and must report unavailability instead of silently failing. Its availability probe must exercise the store itself rather than only locating its utility, and it must not read a stored secret.
 
 ## 🗺️ Source Map
 

@@ -11,7 +11,7 @@ namespace SteamGuardDesktop.Service.Storage
         Available = 0,
 
         /// <summary>
-        /// No credential store is available on the host platform.
+        /// No credential store is available on the host platform, or the credential store cannot be reached.
         /// </summary>
         Unavailable = 1
     }

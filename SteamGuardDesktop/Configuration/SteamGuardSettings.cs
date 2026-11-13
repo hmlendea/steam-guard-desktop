@@ -6,11 +6,6 @@ namespace SteamGuardDesktop.Configuration
     public sealed class SteamGuardSettings
     {
         /// <summary>
-        /// Gets or sets the requested theme preference.
-        /// </summary>
-        public ThemePreference ThemePreference { get; set; } = ThemePreference.System;
-
-        /// <summary>
         /// Gets or sets the timeout applied to Steam web requests, in seconds.
         /// </summary>
         public int NetworkTimeoutSeconds { get; set; } = 30;

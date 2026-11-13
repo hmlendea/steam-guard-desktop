@@ -1,5 +1,3 @@
-using SteamGuardDesktop.Configuration;
-
 namespace SteamGuardDesktop.Service.Configuration
 {
     /// <summary>
@@ -7,11 +5,6 @@ namespace SteamGuardDesktop.Service.Configuration
     /// </summary>
     public sealed class SettingsSnapshot
     {
-        /// <summary>
-        /// Gets or sets the requested theme preference.
-        /// </summary>
-        public ThemePreference ThemePreference { get; set; } = ThemePreference.System;
-
         /// <summary>
         /// Gets or sets a value indicating whether account details are hidden while the window is inactive.
         /// </summary>

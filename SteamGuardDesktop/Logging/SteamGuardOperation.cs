@@ -13,9 +13,9 @@ namespace SteamGuardDesktop.Logging
         public static Operation LaunchApplication => new SteamGuardOperation(nameof(LaunchApplication));
 
         /// <summary>
-        /// Gets the operation that resolves and applies the platform theme.
+        /// Gets the operation that applies the shared theme.
         /// </summary>
-        public static Operation ResolveTheme => new SteamGuardOperation(nameof(ResolveTheme));
+        public static Operation ApplyTheme => new SteamGuardOperation(nameof(ApplyTheme));
 
         /// <summary>
         /// Gets the operation that reads the credential store status.

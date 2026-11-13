@@ -28,14 +28,9 @@ namespace SteamGuardDesktop.Logging
         public static LogInfoKey FailureReason => new SteamGuardInfoKey(nameof(FailureReason));
 
         /// <summary>
-        /// Gets the structured field that reports the resolved platform theme.
+        /// Gets the structured field that reports the applied theme.
         /// </summary>
-        public static LogInfoKey PlatformTheme => new SteamGuardInfoKey(nameof(PlatformTheme));
-
-        /// <summary>
-        /// Gets the structured field that reports the detected desktop environment.
-        /// </summary>
-        public static LogInfoKey DesktopEnvironment => new SteamGuardInfoKey(nameof(DesktopEnvironment));
+        public static LogInfoKey AppTheme => new SteamGuardInfoKey(nameof(AppTheme));
 
         /// <summary>
         /// Gets the structured field that records an HTTP status code.

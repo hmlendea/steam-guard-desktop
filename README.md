@@ -58,7 +58,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - Enrols a Steam Mobile Authenticator and finalises the enrolment with the code that Steam issues.
 - Removes an existing authenticator with its revocation code.
 - Recovers access when the device that held Steam Guard is no longer available.
-- Follows the platform theme on Windows, macOS, GNOME, and KDE, with a documented fallback.
+- Presents the same interface on Windows, macOS, and Linux, and does not adopt host styling.
 
 ## 🎯 Use Cases
 
@@ -113,7 +113,7 @@ dotnet test SteamGuardDesktop.slnx
 
 ## ⚙️ Configuration
 
-Account settings are stored by the application, and the runtime settings are declared in `SteamGuardSettings` and `DiagnosticsSettings`. The secrets themselves are never written to these files. The theme preference and the two privacy preferences are persisted in `settings.json` in the user application-data directory and are changed through the controls in the window.
+Account settings are stored by the application, and the runtime settings are declared in `SteamGuardSettings` and `DiagnosticsSettings`. The secrets themselves are never written to these files. The two privacy preferences are persisted in `settings.json` in the user application-data directory and are changed through the controls in the window. The visual theme is fixed and is not configurable.
 
 ### Configuration Files
 
@@ -144,7 +144,6 @@ The subsequent settings are recognised:
 | Steam Guard | `MaximumResponseBytes` | `int` | `1048576` | Yes | Maximum accepted size of a Steam response. |
 | Steam Guard | `IsAccountHiddenWhenInactive` | `bool` | `true` | No | Hides account details while the window is inactive. Persisted in `settings.json`. |
 | Steam Guard | `IsSecretRevealAllowed` | `bool` | `false` | No | Allows secrets to be revealed on explicit request. Persisted in `settings.json`. |
-| Steam Guard | `ThemePreference` | `ThemePreference` | `System` | No | Selects the System, Light, or Dark theme. Persisted in `settings.json`. |
 | Diagnostics | `MinimumLevel` | `LogLevel` | `Info` | Yes | Minimum severity written to diagnostics. |
 | Diagnostics | `IsFileOutputEnabled` | `bool` | `true` | No | Writes diagnostics to a log file in addition to the console. |
 | Diagnostics | `LogFilePath` | `string` | `steamguarddesktop.log` | No | Path of the diagnostics log file. |
@@ -154,9 +153,9 @@ The subsequent settings are recognised:
 | Component | Supported Versions | Notes |
 |-----------|--------------------|-------|
 | .NET | 10.0 | Required for building and running the application. |
-| Windows | Windows 10 and newer | Uses the Fluent theme and Credential Manager. |
-| macOS | Supported macOS releases with Keychain | Uses the Aqua theme and Keychain. |
-| Linux | Desktop sessions with Secret Service | Uses Adwaita on GNOME, Breeze on KDE, and a documented fallback elsewhere. |
+| Windows | Windows 10 and newer | Uses the shared application theme and Credential Manager. |
+| macOS | Supported macOS releases with Keychain | Uses the shared application theme and Keychain. |
+| Linux | Desktop sessions with Secret Service | Uses the shared application theme and the Secret Service credential store. |
 | Steam confirmation endpoints | Current Steam web behaviour | Unknown confirmation types are not actionable. |
 
 ## 🔌 Integrations
@@ -230,7 +229,7 @@ dotnet test SteamGuardDesktop.slnx
 |---------|---------|-------|---------|
 | `Avalonia` | `11.3.23` | Runtime | Cross-platform desktop windowing and rendering. |
 | `Avalonia.Desktop` | `11.3.23` | Runtime | Platform desktop initialisation. |
-| `Avalonia.Themes.Fluent` | `11.3.23` | Runtime | Shared Fluent theme resources. |
+| `Avalonia.Themes.Fluent` | `11.3.23` | Runtime | Control templates that the shared application theme styles. |
 | `CommunityToolkit.Mvvm` | `8.4.2` | Runtime | Observable objects and generated properties. |
 | `FluentAvaloniaUI` | `2.5.1` | Runtime | Windows Fluent design resources. |
 | `Microsoft.Extensions.DependencyInjection` | `10.0.13` | Runtime | Service composition. |

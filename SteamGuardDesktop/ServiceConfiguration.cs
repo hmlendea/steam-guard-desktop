@@ -61,9 +61,6 @@ namespace SteamGuardDesktop
             services.AddSingleton<IClock, SystemClock>();
             services.AddSingleton<ITicker, AvaloniaTicker>();
             services.AddSingleton<ISecretRedactor, SecretRedactor>();
-            services.AddSingleton<IPlatformThemeResolver, PlatformThemeResolver>();
-            services.AddSingleton<ISystemAccentColourProvider, SystemAccentColourProvider>();
-            services.AddSingleton<IThemeVariantResolver, ThemeVariantResolver>();
             services.AddSingleton<IThemeService, ThemeService>();
 
             services.AddSingleton<ISteamGuard, TOTPSteamGuard>();

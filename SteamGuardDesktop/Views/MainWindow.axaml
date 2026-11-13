@@ -17,10 +17,11 @@
     </ResourceDictionary>
   </Window.Resources>
 
-  <DockPanel>
+  <DockPanel Background="{DynamicResource AppBackgroundBrush}">
     <Border DockPanel.Dock="Bottom"
             Padding="{DynamicResource PagePadding}">
       <TextBlock Text="{Binding StatusMessage}"
+                 Foreground="{DynamicResource FailureBrush}"
                  IsVisible="{Binding HasFailure}"
                  TextWrapping="Wrap" />
     </Border>
@@ -30,12 +31,9 @@
                 Orientation="Horizontal"
                 Spacing="8">
       <TextBlock VerticalAlignment="Center"
-                 FontSize="20"
+                 FontSize="{DynamicResource HeadingFontSize}"
+                 Foreground="{DynamicResource AppForegroundBrush}"
                  Text="Steam Guard Desktop" />
-      <ComboBox x:Name="ThemeSelector"
-                VerticalAlignment="Center"
-                AutomationProperties.Name="Theme preference"
-                SelectionChanged="OnThemePreferenceChanged" />
       <Button Content="Reveal account"
               IsVisible="{Binding AreAccountDetailsConcealed}"
               AutomationProperties.Name="Reveal concealed account details"
@@ -43,11 +41,15 @@
     </StackPanel>
 
     <Grid ColumnDefinitions="Auto,*">
-      <StackPanel Grid.Column="0"
-                  Width="{DynamicResource SidebarWidth}"
-                  Margin="{DynamicResource PagePadding}"
+      <Border Grid.Column="0"
+              Width="{DynamicResource SidebarWidth}"
+              Background="{DynamicResource PanelBackgroundBrush}"
+              BorderBrush="{DynamicResource PanelBorderBrush}"
+              BorderThickness="0,0,1,0">
+      <StackPanel Margin="{DynamicResource PagePadding}"
                   Spacing="8">
-        <TextBlock Text="Accounts" />
+        <TextBlock Foreground="{DynamicResource SecondaryForegroundBrush}"
+                   Text="Accounts" />
 
         <ListBox ItemsSource="{Binding Accounts}"
                  SelectedItem="{Binding SelectedAccount}"
@@ -55,9 +57,11 @@
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:AccountItemViewModel">
               <StackPanel Spacing="2">
-                <TextBlock Text="{Binding Label}" />
-                <TextBlock Text="{Binding SteamIdentifier}"
-                           FontSize="12" />
+                <TextBlock Foreground="{DynamicResource AppForegroundBrush}"
+                           Text="{Binding Label}" />
+                <TextBlock FontSize="{DynamicResource StatusFontSize}"
+                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                           Text="{Binding SteamIdentifier}" />
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>
@@ -72,29 +76,37 @@
         <Button Content="Remove account"
                 Click="OnRemoveAccountClick" />
       </StackPanel>
+      </Border>
 
       <ScrollViewer Grid.Column="1"
                     Margin="{DynamicResource PagePadding}">
         <StackPanel Spacing="12">
           <TextBlock Text="{Binding Authenticator.CurrentCode}"
                      AutomationProperties.Name="Current Steam Guard code"
-                     FontSize="{DynamicResource CodeDisplayFontSize}" />
+                     FontSize="{DynamicResource CodeDisplayFontSize}"
+                     Foreground="{DynamicResource AccentBrush}" />
           <TextBlock Text="{Binding Authenticator.RemainingSeconds}"
-                     AutomationProperties.Name="Seconds remaining for the current code" />
+                     AutomationProperties.Name="Seconds remaining for the current code"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
           <TextBlock Text="The system clock differs from the Steam clock."
+                     Foreground="{DynamicResource WarningBrush}"
                      IsVisible="{Binding Authenticator.HasClockWarning}"
                      TextWrapping="Wrap" />
           <TextBlock Text="The account secrets are invalid or unavailable."
+                     Foreground="{DynamicResource WarningBrush}"
                      IsVisible="{Binding Authenticator.HasSecretProblem}"
                      TextWrapping="Wrap" />
           <TextBlock Text="The credential store is unavailable."
+                     Foreground="{DynamicResource WarningBrush}"
                      IsVisible="{Binding IsSecretStoreUnavailable}"
                      TextWrapping="Wrap" />
           <TextBlock Text="Account details are hidden while the window is inactive."
+                     Foreground="{DynamicResource WarningBrush}"
                      IsVisible="{Binding AreAccountDetailsConcealed}"
                      TextWrapping="Wrap" />
 
-          <TextBlock Text="Pending confirmations" />
+          <TextBlock Text="Pending confirmations"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
 
           <ListBox AutomationProperties.Name="Pending confirmations"
                    ItemsSource="{Binding Confirmations}"
@@ -103,11 +115,14 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ConfirmationItemViewModel">
                 <StackPanel Spacing="2">
-                  <TextBlock Text="{Binding Headline}" />
-                  <TextBlock Text="{Binding TypeName}"
-                             FontSize="12" />
-                  <TextBlock Text="{Binding Summary}"
-                             FontSize="12"
+                  <TextBlock Foreground="{DynamicResource AppForegroundBrush}"
+                             Text="{Binding Headline}" />
+                  <TextBlock FontSize="{DynamicResource StatusFontSize}"
+                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                             Text="{Binding TypeName}" />
+                  <TextBlock FontSize="{DynamicResource StatusFontSize}"
+                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                             Text="{Binding Summary}"
                              TextWrapping="Wrap" />
                 </StackPanel>
               </DataTemplate>
@@ -137,14 +152,16 @@
                     Click="OnDenyClick" />
           </StackPanel>
 
-          <TextBlock Text="Settings" />
+          <TextBlock Text="Settings"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
 
           <CheckBox Content="Hide account details while the window is inactive"
                     IsChecked="{Binding IsAccountLockingEnabled}" />
           <CheckBox Content="Allow secrets to be revealed on request"
                     IsChecked="{Binding IsSecretRevealEnabled}" />
 
-          <TextBlock Text="Account setup" />
+          <TextBlock Text="Account setup"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
 
           <TextBox Watermark="Steam ID 64"
                    Text="{Binding AccountSetup.SteamIdentifier}" />
@@ -172,7 +189,8 @@
                     Click="OnToggleSecretVisibilityClick" />
           </StackPanel>
 
-          <TextBlock Text="Sign in and authenticator recovery" />
+          <TextBlock Text="Sign in and authenticator recovery"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
 
           <TextBox Watermark="Account name"
                    Text="{Binding Recovery.AccountName}" />

@@ -31,7 +31,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 ### Next Quarter
 
 - Add support for the remaining confirmation types once their protocol behaviour is confirmed.
-- Confirm the resolved platform theme against a live Windows, macOS, GNOME, and KDE session.
+- Confirm that the interface renders identically on Windows, macOS, GNOME, and KDE.
 
 ### No Fixed Horizon
 

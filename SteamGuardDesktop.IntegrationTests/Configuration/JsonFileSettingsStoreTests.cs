@@ -3,7 +3,6 @@ using System.IO;
 
 using NUnit.Framework;
 
-using SteamGuardDesktop.Configuration;
 using SteamGuardDesktop.Service.Configuration;
 
 namespace SteamGuardDesktop.IntegrationTests.Settings
@@ -38,7 +37,6 @@ namespace SteamGuardDesktop.IntegrationTests.Settings
 
             SettingsSnapshot snapshot = store.Load();
 
-            Assert.That(snapshot.ThemePreference, Is.EqualTo(ThemePreference.System));
             Assert.That(snapshot.IsAccountHiddenWhenInactive);
             Assert.That(snapshot.IsSecretRevealAllowed, Is.False);
         }
@@ -50,14 +48,12 @@ namespace SteamGuardDesktop.IntegrationTests.Settings
 
             store.Save(new SettingsSnapshot
             {
-                ThemePreference = ThemePreference.Dark,
                 IsAccountHiddenWhenInactive = false,
                 IsSecretRevealAllowed = true
             });
 
             SettingsSnapshot snapshot = new JsonFileSettingsStore(filePath).Load();
 
-            Assert.That(snapshot.ThemePreference, Is.EqualTo(ThemePreference.Dark));
             Assert.That(snapshot.IsAccountHiddenWhenInactive, Is.False);
             Assert.That(snapshot.IsSecretRevealAllowed);
         }
@@ -70,14 +66,14 @@ namespace SteamGuardDesktop.IntegrationTests.Settings
 
             JsonFileSettingsStore store = new(filePath);
 
-            Assert.That(store.Load().ThemePreference, Is.EqualTo(ThemePreference.System));
+            Assert.That(store.Load().IsAccountHiddenWhenInactive);
         }
 
         [Test]
         public void GivenSettings_WhenSavingThem_ThenTheFileContainsNoSecrets()
         {
             JsonFileSettingsStore store = new(filePath);
-            store.Save(new SettingsSnapshot { ThemePreference = ThemePreference.Light });
+            store.Save(new SettingsSnapshot { IsSecretRevealAllowed = true });
 
             string content = File.ReadAllText(filePath);
 

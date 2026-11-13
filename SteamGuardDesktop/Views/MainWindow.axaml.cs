@@ -3,7 +3,6 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-using SteamGuardDesktop.Configuration;
 using SteamGuardDesktop.ViewModels;
 
 namespace SteamGuardDesktop.Views
@@ -13,13 +12,6 @@ namespace SteamGuardDesktop.Views
     /// </summary>
     public sealed partial class MainWindow : Window
     {
-        private static ThemePreference[] ThemePreferences =>
-        [
-            ThemePreference.System,
-            ThemePreference.Light,
-            ThemePreference.Dark
-        ];
-
         /// <summary>
         /// Initialises a new instance of the <see cref="MainWindow"/> class.
         /// </summary>
@@ -27,8 +19,6 @@ namespace SteamGuardDesktop.Views
         {
             InitializeComponent();
 
-            ThemeSelector.ItemsSource = ThemePreferences;
-            ThemeSelector.SelectedIndex = Array.IndexOf(ThemePreferences, ThemePreference.System);
             Deactivated += OnWindowDeactivated;
             Closed += OnWindowClosed;
         }
@@ -89,21 +79,6 @@ namespace SteamGuardDesktop.Views
 
         private void OnSignOutClick(object? sender, RoutedEventArgs arguments)
             => ViewModel?.Recovery.SignOut();
-
-        private void OnThemePreferenceChanged(object? sender, SelectionChangedEventArgs arguments)
-        {
-            if (ThemeSelector.SelectedItem is not ThemePreference selectedPreference)
-            {
-                return;
-            }
-
-            if (ViewModel?.ThemePreference == selectedPreference)
-            {
-                return;
-            }
-
-            ViewModel?.ApplyThemePreference(selectedPreference);
-        }
 
         private void OnWindowDeactivated(object? sender, EventArgs arguments) => ViewModel?.HandleWindowDeactivated();
 

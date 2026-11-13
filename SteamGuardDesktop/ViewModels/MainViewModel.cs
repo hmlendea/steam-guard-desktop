@@ -54,15 +54,6 @@ namespace SteamGuardDesktop.ViewModels
         private SecretStoreAvailability secretStoreAvailability;
 
         [ObservableProperty]
-        private PlatformTheme currentTheme;
-
-        [ObservableProperty]
-        private ThemePreference themePreference;
-
-        [ObservableProperty]
-        private string? accentColour;
-
-        [ObservableProperty]
         private bool isAccountHidden;
 
         [ObservableProperty]
@@ -131,7 +122,7 @@ namespace SteamGuardDesktop.ViewModels
             recoveryViewModel.PropertyChanged += OnRecoveryPropertyChanged;
 
             ApplyPersistedSettings();
-            themeService.ApplyTheme(settings.ThemePreference);
+            themeService.ApplyTheme();
             ticker.Tick += OnTickerTick;
         }
 
@@ -237,14 +228,13 @@ namespace SteamGuardDesktop.ViewModels
         public void Load()
         {
             SecretStoreAvailability = accountService.GetSecretStoreAvailability();
-            CurrentTheme = themeService.GetCurrentTheme();
-            AccentColour = themeService.GetAccentColour();
+            AppTheme appliedTheme = themeService.ApplyTheme();
 
             logger.Info(
-                SteamGuardOperation.ResolveTheme,
+                SteamGuardOperation.ApplyTheme,
                 OperationStatus.Success,
-                new LogInfo(SteamGuardInfoKey.PlatformTheme, CurrentTheme.ToString()),
-                new LogInfo(SteamGuardInfoKey.DesktopEnvironment, themeService.GetDesktopEnvironment()));
+                new LogInfo(SteamGuardInfoKey.AppTheme, appliedTheme.ToString()));
+
             IsAccountHidden = false;
 
             Accounts.Clear();
@@ -486,25 +476,6 @@ namespace SteamGuardDesktop.ViewModels
         }
 
         /// <summary>
-        /// Applies the requested theme preference and remembers it.
-        /// </summary>
-        /// <param name="themePreferenceValue">The theme preference selected by the user.</param>
-        public void ApplyThemePreference(ThemePreference themePreferenceValue)
-        {
-            ThemePreference = themePreferenceValue;
-            settings.ThemePreference = themePreferenceValue;
-            PersistSettings();
-
-            CurrentTheme = themeService.ApplyTheme(themePreferenceValue);
-            AccentColour = themeService.GetAccentColour();
-
-            logger.Info(
-                SteamGuardOperation.ResolveTheme,
-                OperationStatus.Success,
-                new LogInfo(SteamGuardInfoKey.PlatformTheme, CurrentTheme.ToString()));
-        }
-
-        /// <summary>
         /// Stops background signalling when the window is closing.
         /// </summary>
         public void ShutDown()
@@ -519,16 +490,12 @@ namespace SteamGuardDesktop.ViewModels
         {
             SettingsSnapshot snapshot = settingsStore.Load();
 
-            settings.ThemePreference = snapshot.ThemePreference;
             settings.IsAccountHiddenWhenInactive = snapshot.IsAccountHiddenWhenInactive;
             settings.IsSecretRevealAllowed = snapshot.IsSecretRevealAllowed;
-
-            ThemePreference = snapshot.ThemePreference;
         }
 
         private void PersistSettings() => settingsStore.Save(new SettingsSnapshot
         {
-            ThemePreference = settings.ThemePreference,
             IsAccountHiddenWhenInactive = settings.IsAccountHiddenWhenInactive,
             IsSecretRevealAllowed = settings.IsSecretRevealAllowed
         });

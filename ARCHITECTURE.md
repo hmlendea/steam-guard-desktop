@@ -33,7 +33,7 @@ This document describes the current architecture of Steam Guard Desktop, a cross
 - [Testing and Verification](#testing-and-verification)
 - [Design Constraints](#design-constraints)
 - [Extension Points](#extension-points)
-  - [Platform Theme Resolution](#platform-theme-resolution)
+  - [Adding a Theme Resource](#adding-a-theme-resource)
   - [Secret Storage](#secret-storage)
 - [Source Map](#source-map)
 - [Related Documentation](#related-documentation)
@@ -88,8 +88,8 @@ The principal architecture boundaries are:
 flowchart TD
     Start[Process start] --> Build[Build service provider]
     Build --> LoadAccounts[Load accounts from account store]
-    LoadAccounts --> ResolveTheme[Resolve platform theme]
-    ResolveTheme --> ShowWindow[Show main window]
+    LoadAccounts --> ApplyTheme[Apply the shared theme]
+    ApplyTheme --> ShowWindow[Show main window]
     ShowWindow --> InitialAccount[Select first account]
     InitialAccount --> UserAction[Wait for user action]
     UserAction --> Start
@@ -97,7 +97,7 @@ flowchart TD
 
 The principal runtime sequence is:
 1. `Program.Main` builds the Avalonia application builder and starts the classic desktop lifetime.
-2. `App.OnFrameworkInitializationCompleted` builds the service provider, resolves the main view model, and loads configured accounts and the platform theme.
+2. `App.OnFrameworkInitializationCompleted` builds the service provider, resolves the main view model, and loads the configured accounts. The shared theme is applied at startup and is not influenced by the host.
 3. The main window displays the selected account, the current code, and any pending confirmations.
 4. The service provider is disposed when the desktop lifetime exits.
 
@@ -112,8 +112,7 @@ The principal runtime sequence is:
 | `SteamConfirmationClient` | Performs signed HTTPS requests and interprets Steam responses | `HttpClient`, `ConfirmationRequestBuilder`, `ISteamResponseParser` | Singleton |
 | `OtpCodeGenerator` | Produces Steam Guard codes and their validity window | `ISteamGuard`, `IClock` | Singleton |
 | `ConfirmationRequestSigner` | Produces HMAC-SHA1 confirmation signatures | `System.Security.Cryptography` | Singleton |
-| `PlatformThemeResolver` | Resolves the platform theme from a host description | None | Singleton |
-| `ThemeService` | Applies the requested theme variant and reports the resolved theme and accent colour | `IPlatformThemeResolver`, `ISystemAccentColourProvider` | Singleton |
+| `ThemeService` | Applies the single shared theme | Avalonia application | Singleton |
 | `ClockDriftService` | Compares the local clock with the Steam server clock | `ISteamConfirmationClient`, `IClock` | Singleton |
 | `LoginService` | Coordinates the sign-in exchange without persisting the password | `ISteamAuthenticationClient`, `IPasswordEncryptor` | Singleton |
 | `AuthenticatorManagementService` | Enrols, inspects, removes, and recovers the authenticator | `ISteamAuthenticationClient`, `IDeviceIdentityProvider`, `IOtpCodeGenerator` | Singleton |
@@ -151,7 +150,7 @@ Paths:
 - `SteamGuardDesktop/Service/Time`
 
 Responsibilities:
-- Coordinate validation, storage, code generation, confirmation decisions, and theme resolution.
+- Coordinate validation, storage, code generation, and confirmation decisions.
 - Expose result types that describe success, invalid input, and safe failure reasons.
 
 Boundary rules:
@@ -232,7 +231,6 @@ flowchart LR
 | `/IAuthenticationService/*` | Outbound | HTTPS GET and POST carrying a protobuf-JSON `input_json` payload | Valve | Credential failures return the message reported by Steam; transport failures produce a safe reason |
 | `/ITwoFactorService/*` | Outbound | HTTPS POST carrying a protobuf-JSON `input_json` payload, authorised with a bearer access token | Valve | Rejected authenticator operations produce a safe reason |
 | `INativeSecretBackend` | Local | Credential read, write, and delete by entry name | Application and operating system | Unavailable stores are reported to the caller |
-| `IPlatformThemeResolver` | Local | Pure function from host description to platform theme | Application | Unidentified environments resolve to the documented fallback |
 
 ## 🔀 Key Processes
 
@@ -313,9 +311,9 @@ sequenceDiagram
 
 The view model refuses a second decision while one is in progress, rejects unsupported confirmation types, and refreshes the list after a successful decision instead of mutating the list locally. Selecting a confirmation populates the creation time and, on request, loads the details fragment through `/mobileconf/details/{id}`, which is reduced to plain text before it is displayed.
 
-## ⚙️ Platform Theming
+## ⚙️ Visual Theme
 
-The theme resolver is a pure function over a `PlatformDescription` value: Windows resolves to the Fluent theme, macOS to the Aqua theme, GNOME to Adwaita, KDE to Breeze, and any unidentified environment to the documented fallback. `ThemeService` applies the user preference as an Avalonia theme variant through `IThemeVariantResolver`, so the system, light, and dark variants are selected at runtime with System as the default, and `RefreshFromHost` reapplies the variant when the host reports a change in its light or dark preference. The accent colour is read from the host through `ISystemAccentColourProvider`, which reads the Windows accent colour hint, the macOS accent colour default, the GNOME accent colour setting, and the KDE accent colour declaration. Feature views consume shared resources from `Views/ThemeResources.axaml` rather than platform-specific values.
+The application presents one fixed look on every operating system and desktop environment. It does not detect the host platform, the desktop environment, the system light or dark preference, or the system accent colour, and it never adopts host styling. `ThemeService` forces the dark Avalonia theme variant and reports the single `AppTheme.Standard` theme, and the shared brushes, spacing, and font sizes are declared once in `Views/ThemeResources.axaml`, which `App.axaml` merges into the application resources. Feature views reference those resources by key, so a visual change is made in one file and reaches every platform.
 
 ## 🧵 Cross-Cutting Concerns
 
@@ -329,7 +327,7 @@ Failures are translated into result objects with safe reasons at the boundary th
 
 ### Observability
 
-`SteamGuardLogger` writes structured lines through `NuciLog.Core` with an `Operation` on every call. Sensitive keys are declared as sensitive, and free-text messages are avoided for values that could identify an account. Account saves, account removals, authenticator codes, confirmation loads, confirmation decisions, secret store status, and theme resolution are recorded with operations and structured keys; secrets, tokens, signatures, and request addresses are never recorded. Logs are written to the console and, when enabled, to a log file.
+`SteamGuardLogger` writes structured lines through `NuciLog.Core` with an `Operation` on every call. Sensitive keys are declared as sensitive, and free-text messages are avoided for values that could identify an account. Account saves, account removals, authenticator codes, confirmation loads, confirmation decisions, secret store status, and theme application are recorded with operations and structured keys; secrets, tokens, signatures, and request addresses are never recorded. Logs are written to the console and, when enabled, to a log file.
 
 ### Configuration
 
@@ -337,7 +335,7 @@ Failures are translated into result objects with safe reasons at the boundary th
 |--------------------|--------|----------------|---------------------------|
 | `SteamGuardSettings` | In-code defaults, created by the composition root, superseded by the persisted preference file | Base addresses, network timeout, response size limit, and privacy toggles | Contains no secrets |
 | `DiagnosticsSettings` | In-code defaults, created by the composition root | Minimum level, line format, and log file path | Never contains secrets |
-| User preferences | `settings.json` in the user application-data directory | Theme preference, inactive-window lock, and secret reveal | Contains no secrets; every secret lives in the credential store |
+| User preferences | `settings.json` in the user application-data directory | Inactive-window lock and secret reveal | Contains no secrets; every secret lives in the credential store |
 | Imported account configuration | A file selected by the user | Steam ID 64, label, and secrets supplied once | Deleted after a successful import; secrets move to the credential store |
 | Account metadata | Encrypted account file | Labels, identifiers, device identifiers, and secret entry names | Secret entry names only; values live in the credential store |
 
@@ -395,7 +393,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, theme resolution, accent colour reading, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, and source-file conventions.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources and single forced theme variant.
 
 Execute the principal automated verification with:
 
@@ -412,13 +410,13 @@ dotnet test SteamGuardDesktop.slnx
 
 ## 🔧 Extension Points
 
-### Platform Theme Resolution
+### Adding a Theme Resource
 
-1. Extend `IPlatformThemeResolver` or add a resolution rule in `PlatformThemeResolver`.
-2. Register the rule through the existing singleton registration in `ServiceConfiguration`.
-3. Add unit tests covering the new host description and confirm the fallback remains unchanged.
+1. Declare the brush, thickness, or size in `Views/ThemeResources.axaml`.
+2. Reference it from a view with `{DynamicResource ...}` rather than a literal value.
+3. Extend `ThemeResourceTests` so the required resource keys remain declared.
 
-Resolution must stay free of display-server dependencies so that it remains testable.
+Feature views must never hard-code colours, fonts, or control sizes, so that the single look stays consistent everywhere.
 
 ### Secret Storage
 

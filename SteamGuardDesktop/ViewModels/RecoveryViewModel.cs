@@ -42,6 +42,9 @@ namespace SteamGuardDesktop.ViewModels
         private string recoveryCode = string.Empty;
 
         [ObservableProperty]
+        private string issuedRevocationCode = string.Empty;
+
+        [ObservableProperty]
         private string accessToken = string.Empty;
 
         [ObservableProperty]
@@ -102,6 +105,11 @@ namespace SteamGuardDesktop.ViewModels
         /// Gets a value indicating whether an SMS code must be supplied to finish the current step.
         /// </summary>
         public bool IsSmsCodeRequired => IsRecoveringLostDevice || HasPendingActivation;
+
+        /// <summary>
+        /// Gets a value indicating whether an issued revocation code must be shown to the user.
+        /// </summary>
+        public bool HasIssuedRevocationCode => !string.IsNullOrWhiteSpace(IssuedRevocationCode);
 
         /// <summary>
         /// Starts the sign-in with the credentials entered in the form.
@@ -250,7 +258,19 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
-            ClearStatus();
+            AuthenticatorOperationResult startResult = authenticatorManagementService.StartLostDeviceRecovery(
+                SteamIdentifier,
+                AccessToken);
+
+            if (!startResult.IsSuccessful)
+            {
+                IsRecoveringLostDevice = false;
+                ReportStatus(startResult.FailureReason);
+
+                return;
+            }
+
+            ReportStatus("Steam sent a code to the registered phone number. Enter it to recover the authenticator.");
         }
 
         /// <summary>
@@ -308,7 +328,10 @@ namespace SteamGuardDesktop.ViewModels
 
             enrolledAuthenticator = result.Authenticator;
             HasPendingActivation = true;
-            ReportStatus("Steam sent an SMS code to the registered phone number. Enter it and activate the authenticator.");
+            IssuedRevocationCode = result.Authenticator.RevocationCode;
+            ReportStatus(
+                "Steam sent an SMS code to the registered phone number. Store the revocation code shown above, then " +
+                "enter the SMS code and activate the authenticator.");
         }
 
         /// <summary>
@@ -436,6 +459,7 @@ namespace SteamGuardDesktop.ViewModels
             GuardCode = string.Empty;
             SmsCode = string.Empty;
             RecoveryCode = string.Empty;
+            IssuedRevocationCode = string.Empty;
             GuardMessage = string.Empty;
             IsSignInStarted = false;
             IsGuardSubmitted = false;
@@ -456,6 +480,7 @@ namespace SteamGuardDesktop.ViewModels
             GuardCode = string.Empty;
             SmsCode = string.Empty;
             RecoveryCode = string.Empty;
+            IssuedRevocationCode = string.Empty;
             AccessToken = string.Empty;
             GuardMessage = string.Empty;
             SteamIdentifier = string.Empty;
@@ -517,5 +542,8 @@ namespace SteamGuardDesktop.ViewModels
 
         /// <inheritdoc />
         partial void OnHasPendingActivationChanged(bool value) => OnPropertyChanged(nameof(IsSmsCodeRequired));
+
+        /// <inheritdoc />
+        partial void OnIssuedRevocationCodeChanged(string value) => OnPropertyChanged(nameof(HasIssuedRevocationCode));
     }
 }

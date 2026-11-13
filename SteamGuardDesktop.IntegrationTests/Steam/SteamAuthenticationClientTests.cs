@@ -344,6 +344,42 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
         }
 
         [Test]
+        public void GivenALostDevice_WhenStartingTheRecovery_ThenTheChallengeEndpointIsUsed()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"response\":{\"success\":true}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            SteamClientResult<bool> result = client.StartAuthenticatorRevocation(
+                "76561198028572203",
+                "access-token-value");
+
+            Assert.That(result.IsSuccessful);
+            Assert.That(
+                handler.Requests[0].RequestUri?.AbsolutePath,
+                Is.EqualTo("/ITwoFactorService/RemoveAuthenticatorViaChallengeStart/v1"));
+            Assert.That(handler.Requests[0].Headers.Authorization?.Parameter, Is.EqualTo("access-token-value"));
+        }
+
+        [Test]
+        public void GivenARejectedRecoveryStart_WhenStartingTheRecovery_ThenTheRequestFails()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"response\":{\"success\":false}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            SteamClientResult<bool> result = client.StartAuthenticatorRevocation(
+                "76561198028572203",
+                "access-token-value");
+
+            Assert.That(result.IsSuccessful, Is.False);
+        }
+
+        [Test]
         public void GivenAFailure_WhenSendingARequest_ThenNoSecretAppearsInDiagnostics()
         {
             RecordingHttpMessageHandler handler = new(new HttpRequestException("The host is unreachable."));

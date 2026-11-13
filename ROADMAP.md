@@ -31,6 +31,7 @@ The application is feature-complete and every automated check passes. The labour
 - Publish the first tagged release and confirm that the workflow attaches an archive for every supported runtime identifier.
 - Validate a generated code against the official Steam authenticator for the same time window, using an enrolled account whose secrets were stored by this application.
 - Validate a full authenticator enrolment against a live account that already has a phone number, and confirm that the account can then sign in with the generated code.
+- Validate a lost-device recovery against a live account that already has a phone number, confirming that the challenge is started before the code is submitted and that the replacement authenticator produces valid codes.
 - Re-check the sign-in, confirmation, server-time, and confirmation-detail responses against a live session, now that the accepted-size limit is enforced while reading.
 - Confirm on macOS and Windows that a credential store which is present but unreachable is reported unavailable, as it now is on Linux.
 
@@ -54,13 +55,15 @@ The application is feature-complete and every automated check passes. The labour
 | Platform credential validation | Next quarter | Verified secret storage on macOS and Windows, after Linux. | In Progress |
 | Credential store capability probe | Next 30 days | A session whose credential store is present but unreachable is reported as unavailable instead of failing on every write. | Complete |
 | Authenticator enrolment correctness | Next 30 days | An enrolled or recovered authenticator stores a shared secret that the code generator accepts and that produces the same code as the official authenticator. | In Progress |
+| Lost-device recovery handshake | Next 30 days | The revocation challenge is started before the code is submitted, and the replacement authenticator produces valid codes. | Complete |
 
 ## ⚠️ Dependencies and Risks
 
 - Branch divergence - The release workflow, README links, and badges target `master`, which lags `dev`, so a tag placed on `master` would package older work - Merge `dev` into `master` before the first release and place each tag on `master`.
 - Steam protocol endpoints - A change to the sign-in, confirmation, or authenticator endpoints breaks the corresponding feature - Keep every protocol isolated behind a client and cover it with integration tests.
 - Unverified enrolment finalisation - The activation handshake is covered by unit and scripted integration tests only, so an unconfirmed assumption about the SMS activation field or the retry window would fail at the last step of an enrolment - Enrol on an account that has a phone number and compare the resulting code with the official authenticator before relying on the stored secrets.
-- Phone number required for enrolment - Steam sends the activation code to a phone number, so an account without one cannot be enrolled or recovered by this application - Document the prerequisite and keep the reported reason truthful.
+- Unverified recovery challenge - Starting the lost-device recovery is covered by unit and scripted integration tests only, so an unconfirmed assumption about the challenge handshake would fail before the replacement authenticator is issued - Confirm the full recovery path on an account that already has a phone number.
+- Phone number required for enrolment and recovery - Steam sends the activation and recovery codes to a phone number, so an account without one cannot be enrolled or recovered by this application - Document the prerequisite and keep the reported reason truthful.
 - Unverified live endpoints - Only the credential sign-in key exchange has been exercised against Steam; every other response shape is verified against a scripted handler alone - Re-check each endpoint against a live session before the first release.
 - Credential store reachability on macOS and Windows - The reachability probe is exercised on Linux only, because the development environment has no macOS or Windows host - Confirm the probe on both platforms before the first release.
 - Encrypted fallback is machine-bound - The fallback key is derived from the machine and user identifiers, so a copied or renamed profile cannot be decrypted and its accounts must be added again - An unreadable file is moved to a `.unreadable` sibling at startup and the constraint is documented.

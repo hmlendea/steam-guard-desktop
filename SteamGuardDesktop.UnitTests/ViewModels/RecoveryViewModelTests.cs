@@ -216,6 +216,46 @@ namespace SteamGuardDesktop.UnitTests.Presentation
         }
 
         [Test]
+        public void GivenAnEnrolledAuthenticator_WhenTheActivationIsPending_ThenTheIssuedRevocationCodeIsShown()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+
+            managementService.AuthenticatorToReturn = BuildEnrolledAuthenticator();
+
+            viewModel.EnrolAuthenticator();
+
+            Assert.That(viewModel.HasIssuedRevocationCode);
+            Assert.That(viewModel.IssuedRevocationCode, Is.EqualTo("R61387"));
+        }
+
+        [Test]
+        public void GivenASignedInAccount_WhenStartingTheRecovery_ThenTheChallengeIsStarted()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+
+            viewModel.StartLostDeviceRecovery();
+
+            Assert.That(managementService.StartRecoveryWasCalled);
+            Assert.That(viewModel.IsRecoveringLostDevice);
+        }
+
+        [Test]
+        public void GivenARejectedRecoveryStart_WhenStartingTheRecovery_ThenTheSmsStepIsNotOffered()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+            managementService.IsRecoveryStartSuccessful = false;
+
+            viewModel.StartLostDeviceRecovery();
+
+            Assert.That(managementService.StartRecoveryWasCalled);
+            Assert.That(viewModel.IsRecoveringLostDevice, Is.False);
+            Assert.That(viewModel.HasStatusMessage);
+        }
+
+        [Test]
         public void GivenAPopulatedForm_WhenResetting_ThenEveryFieldIsCleared()
         {
             viewModel.AccountName = "DummyUser";
@@ -359,6 +399,22 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 string smsActivationCode)
             {
                 FinalizeWasCalled = true;
+
+                return AuthenticatorOperationResult.Successful();
+            }
+
+            public bool IsRecoveryStartSuccessful { get; set; } = true;
+
+            public bool StartRecoveryWasCalled { get; private set; }
+
+            public AuthenticatorOperationResult StartLostDeviceRecovery(string steamIdentifier, string accessToken)
+            {
+                StartRecoveryWasCalled = true;
+
+                if (!IsRecoveryStartSuccessful)
+                {
+                    return AuthenticatorOperationResult.Failed("Steam rejected the recovery request.");
+                }
 
                 return AuthenticatorOperationResult.Successful();
             }

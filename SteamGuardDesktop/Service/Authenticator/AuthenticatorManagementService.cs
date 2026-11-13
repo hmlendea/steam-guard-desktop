@@ -7,6 +7,7 @@ using SteamGuardDesktop.Client.Steam;
 using SteamGuardDesktop.Domain.Authenticator;
 using SteamGuardDesktop.Domain.Login;
 using SteamGuardDesktop.Logging;
+using SteamGuardDesktop.Service.Time;
 
 namespace SteamGuardDesktop.Service.Authenticator
 {
@@ -17,6 +18,7 @@ namespace SteamGuardDesktop.Service.Authenticator
         ISteamAuthenticationClient authenticationClient,
         IDeviceIdentityProvider deviceIdentityProvider,
         IOtpCodeGenerator otpCodeGenerator,
+        IClockDriftService clockDriftService,
         ILogger logger) : IAuthenticatorManagementService
     {
         private static int MaximumFinalizationAttempts => 30;
@@ -108,6 +110,21 @@ namespace SteamGuardDesktop.Service.Authenticator
             ArgumentNullException.ThrowIfNull(enrolledAuthenticator, nameof(enrolledAuthenticator));
             ArgumentException.ThrowIfNullOrWhiteSpace(smsActivationCode, nameof(smsActivationCode));
 
+            ClockDriftReport? driftReport = clockDriftService.Evaluate();
+
+            if (driftReport is null)
+            {
+                return AuthenticatorOperationResult.Failed(
+                    "The Steam clock could not be read, so the authenticator cannot be activated safely.");
+            }
+
+            if (driftReport.RequiresAttention)
+            {
+                return AuthenticatorOperationResult.Failed(
+                    "The local clock differs from the Steam clock by more than the accepted window. " +
+                    "Synchronise the operating system clock and activate the authenticator again.");
+            }
+
             for (int attempt = 0; attempt < MaximumFinalizationAttempts; ++attempt)
             {
                 string? activationCode = GenerateActivationCode(enrolledAuthenticator);
@@ -144,6 +161,29 @@ namespace SteamGuardDesktop.Service.Authenticator
             }
 
             return AuthenticatorOperationResult.Failed("Steam did not activate the authenticator in time.");
+        }
+
+        /// <inheritdoc />
+        public AuthenticatorOperationResult StartLostDeviceRecovery(string steamIdentifier, string accessToken)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(steamIdentifier, nameof(steamIdentifier));
+            ArgumentException.ThrowIfNullOrWhiteSpace(accessToken, nameof(accessToken));
+
+            SteamClientResult<bool> result = authenticationClient.StartAuthenticatorRevocation(
+                steamIdentifier,
+                accessToken);
+
+            if (!result.IsSuccessful)
+            {
+                return AuthenticatorOperationResult.Failed(result.FailureReason);
+            }
+
+            logger.Info(
+                SteamGuardOperation.RecoverAuthenticator,
+                OperationStatus.Started,
+                new LogInfo(SteamGuardInfoKey.AccountIdentifier, steamIdentifier));
+
+            return AuthenticatorOperationResult.Successful();
         }
 
         /// <inheritdoc />

@@ -51,6 +51,15 @@ namespace SteamGuardDesktop.Service.Authenticator
             string smsActivationCode);
 
         /// <summary>
+        /// Starts the recovery of an authenticator whose device is no longer available, so that Steam sends the code
+        /// that the recovery must be continued with.
+        /// </summary>
+        /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>
+        /// <param name="accessToken">The access token of the authenticated session.</param>
+        /// <returns>The outcome of the operation.</returns>
+        AuthenticatorOperationResult StartLostDeviceRecovery(string steamIdentifier, string accessToken);
+
+        /// <summary>
         /// Recovers an account whose authenticator device is no longer available.
         /// </summary>
         /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>

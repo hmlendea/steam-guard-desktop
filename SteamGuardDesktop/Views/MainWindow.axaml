@@ -220,6 +220,10 @@
 
           <TextBlock Text="Authenticator"
                      IsVisible="{Binding Recovery.IsGuardSubmitted}" />
+          <TextBlock Text="{Binding Recovery.IssuedRevocationCode}"
+                     AutomationProperties.Name="Issued revocation code"
+                     IsVisible="{Binding Recovery.HasIssuedRevocationCode}"
+                     TextWrapping="Wrap" />
           <TextBox Watermark="Revocation code"
                    IsVisible="{Binding Recovery.IsGuardSubmitted}"
                    Text="{Binding Recovery.RecoveryCode}"

@@ -200,6 +200,9 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 EnrolledAuthenticator enrolledAuthenticator,
                 string smsActivationCode) => AuthenticatorOperationResult.Successful();
 
+            public AuthenticatorOperationResult StartLostDeviceRecovery(string steamIdentifier, string accessToken) =>
+                AuthenticatorOperationResult.Successful();
+
             public AuthenticatorEnrolmentResult RecoverAuthenticator(
                 string steamIdentifier,
                 string accessToken,

@@ -58,7 +58,8 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - Stores the access token that a sign-in issues once the account is saved, and revokes the session on sign-out.
 - Enrols a Steam Mobile Authenticator, releases the activation attempt against the code that Steam sends to the registered phone number, and saves the account once Steam confirms the enrolment.
 - Removes an existing authenticator with its revocation code.
-- Recovers access when the device that held Steam Guard is no longer available.
+- Recovers access when the device that held Steam Guard is no longer available, starting the revocation challenge so that Steam sends the code to the registered phone number.
+- Shows the revocation code that Steam issues at enrolment, so that the authenticator can be removed if the enrolment is not completed.
 - Presents the same interface on Windows, macOS, and Linux, and does not adopt host styling.
 
 ## 🎯 Use Cases
@@ -72,7 +73,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
 
 Add an account with its Steam ID 64, shared secret, identity secret, and Steam access token, then select it in the account list. The authenticator panel displays the current code and its countdown; copying the code places it on the clipboard. Refreshing the confirmation list retrieves the pending confirmations, and the approve and deny actions apply a decision to the selected confirmation after an explicit user action.
 
-An account can also be provisioned by signing in with its account name and password. The sign-in accepts the guard that Steam requests, and the resulting session can enrol a new authenticator, remove an existing one with its revocation code, or recover access when the device that held Steam Guard is no longer available. Enrolling a new authenticator requires a phone number on the account: Steam sends a code to it, and the enrolment is finalised with that code together with the code derived from the issued shared secret, which is regenerated for each attempt while Steam keeps asking for another one. Signing out revokes the session through Steam and clears the form. The password is used only for the encrypted exchange and is never stored.
+An account can also be provisioned by signing in with its account name and password. The sign-in accepts the guard that Steam requests, and the resulting session can enrol a new authenticator, remove an existing one with its revocation code, or recover access when the device that held Steam Guard is no longer available. Enrolling a new authenticator requires a phone number on the account: Steam sends a code to it, and the enrolment is finalised with that code together with the code derived from the issued shared secret, which is regenerated for each attempt while Steam keeps asking for another one. The revocation code that Steam issues is displayed before the enrolment is activated, so that it can be recorded; the activation is refused when the local clock differs from the Steam clock by more than the accepted window, because the derived code would otherwise belong to the wrong window. Recovering an authenticator on a device that is no longer available starts the revocation challenge first, so that Steam sends the code to the registered phone number before the code is submitted. Signing out revokes the session through Steam and clears the form. The password is used only for the encrypted exchange and is never stored.
 
 ```bash
 dotnet run --project SteamGuardDesktop
@@ -303,6 +304,8 @@ See [ROADMAP.md](./ROADMAP.md) for planned work and forthcoming changes.
 |---------|----------------|------------|
 | The authenticator panel shows no code | The stored shared secret is missing or not Base32 | Re-enter the shared secret for the account. |
 | A clock warning is displayed | The local clock differs from the Steam clock by more than 30 seconds | Synchronise the operating system clock. |
+| The authenticator activation is refused because of the clock | The activation code is derived from a time window, so a drifting clock produces the wrong code | Synchronise the operating system clock and activate the authenticator again. |
+| The authenticator was issued but not activated | The enrolment was interrupted after Steam attached the authenticator | Use the revocation code shown at enrolment to remove the authenticator, then enrol again. |
 | Confirmations cannot be loaded | The Steam access token is missing or expired | Sign in again to obtain a current access token. |
 | The sign-in observes that a code is not accepted | Steam only offered approval on an existing device | Approve the sign-in on the device that holds the authenticator. |
 | The sign-in reports that the credentials are incorrect | The account name or password was mistyped | Check the credentials and start the sign-in again. |

@@ -60,6 +60,9 @@ namespace SteamGuardDesktop.ViewModels
         private bool isRecoveringLostDevice;
 
         [ObservableProperty]
+        private int signOutRequestCount;
+
+        [ObservableProperty]
         private string steamIdentifier = string.Empty;
 
         /// <summary>
@@ -86,6 +89,11 @@ namespace SteamGuardDesktop.ViewModels
         /// Gets a value indicating whether a code must be supplied to finish the sign-in.
         /// </summary>
         public bool IsCodeRequired => IsGuardCodeRequired;
+
+        /// <summary>
+        /// Gets a value indicating whether an account has been saved since the last change.
+        /// </summary>
+        public event EventHandler? AccountSaved;
 
         /// <summary>
         /// Starts the sign-in with the credentials entered in the form.
@@ -184,6 +192,13 @@ namespace SteamGuardDesktop.ViewModels
 
             IsSignInStarted = false;
             IsGuardSubmitted = true;
+
+            if (!accountService.IsAccountConfigured(SteamIdentifier))
+            {
+                ReportStatus("The sign-in succeeded. Enrol or recover an authenticator to save the account and store the access token.");
+
+                return;
+            }
 
             AccountAccessTokenResult tokenResult = accountService.SaveAccessToken(SteamIdentifier, AccessToken);
 
@@ -338,6 +353,7 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             enrolledAuthenticator = null;
+            AccountSaved?.Invoke(this, EventArgs.Empty);
             ReportStatus("The authenticator was enrolled and the account was saved.");
         }
 
@@ -382,7 +398,42 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
+            AccountAccessTokenResult tokenResult = SaveRecoveredAccessToken();
+
+            if (!tokenResult.IsSuccessful)
+            {
+                ReportStatus(tokenResult.FailureReason);
+
+                return;
+            }
+
+            AccountSaved?.Invoke(this, EventArgs.Empty);
             ReportStatus("The authenticator was recovered and the account was saved.");
+        }
+
+        /// <summary>
+        /// Signs out of the account and discards the session material held by this form.
+        /// </summary>
+        public void SignOut()
+        {
+            if (!string.IsNullOrWhiteSpace(AccessToken))
+            {
+                authenticatorManagementService.RemoveAllGuardCookies(AccessToken);
+            }
+
+            challenge = null;
+            enrolledAuthenticator = null;
+            AccessToken = string.Empty;
+            GuardCode = string.Empty;
+            SmsCode = string.Empty;
+            RecoveryCode = string.Empty;
+            GuardMessage = string.Empty;
+            IsSignInStarted = false;
+            IsGuardSubmitted = false;
+            IsGuardCodeRequired = false;
+            IsRecoveringLostDevice = false;
+            SignOutRequestCount += 1;
+            ClearStatus();
         }
 
         /// <summary>
@@ -404,6 +455,16 @@ namespace SteamGuardDesktop.ViewModels
             IsGuardSubmitted = false;
             IsGuardCodeRequired = false;
             IsRecoveringLostDevice = false;
+        }
+
+        private AccountAccessTokenResult SaveRecoveredAccessToken()
+        {
+            if (string.IsNullOrWhiteSpace(AccessToken))
+            {
+                return AccountAccessTokenResult.Successful();
+            }
+
+            return accountService.SaveAccessToken(SteamIdentifier, AccessToken);
         }
 
         private static string ComposeAccountFailure(AccountSaveResult result)

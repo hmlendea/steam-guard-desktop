@@ -63,6 +63,13 @@ namespace SteamGuardDesktop.Service.Authenticator
             string smsCode);
 
         /// <summary>
+        /// Signs every other Steam session out of the account.
+        /// </summary>
+        /// <param name="accessToken">The access token of the authenticated session.</param>
+        /// <returns>The outcome of the operation.</returns>
+        AuthenticatorOperationResult RemoveAllGuardCookies(string accessToken);
+
+        /// <summary>
         /// Creates the secrets that a recovered authenticator should use.
         /// </summary>
         /// <param name="enrolledAuthenticator">The authenticator issued by Steam.</param>

@@ -338,6 +338,9 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 return AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn, string.Empty);
             }
 
+            public AuthenticatorOperationResult RemoveAllGuardCookies(string accessToken) =>
+                AuthenticatorOperationResult.Successful();
+
             public SteamGuardDesktop.Domain.Authenticator.AuthenticatorSecrets CreateSecrets(EnrolledAuthenticator enrolledAuthenticator) => new()
             {
                 SharedSecret = enrolledAuthenticator.SharedSecret,
@@ -370,6 +373,8 @@ namespace SteamGuardDesktop.UnitTests.Presentation
             }
 
             public AccountRemovalResult RemoveAccount(string accountIdentifier) => AccountRemovalResult.Successful();
+
+            public bool IsAccountConfigured(string steamIdentifier) => true;
 
             public SteamGuardDesktop.Domain.Authenticator.AuthenticatorSecrets? GetSecrets(SteamGuardDesktop.Domain.Account.SteamAccount account) => null;
 

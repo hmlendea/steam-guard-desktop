@@ -53,7 +53,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - Stores account secrets in the platform credential store and removes them with the account.
 - Signs in to Steam with an account name and password, exchanging the password over an RSA-encrypted request without persisting it.
 - Accepts the guard that Steam requests, whether it is a code sent to the e-mail address or a code from an existing authenticator.
-- Stores the access token that a sign-in issues so that confirmations keep working afterwards.
+- Stores the access token that a sign-in issues once the account is saved, and revokes the session on sign-out.
 - Enrols a Steam Mobile Authenticator and finalises the enrolment with the code that Steam issues.
 - Removes an existing authenticator with its revocation code.
 - Recovers access when the device that held Steam Guard is no longer available.
@@ -70,7 +70,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
 
 Add an account with its Steam ID 64, shared secret, identity secret, and Steam access token, then select it in the account list. The authenticator panel displays the current code and its countdown; copying the code places it on the clipboard. Refreshing the confirmation list retrieves the pending confirmations, and the approve and deny actions apply a decision to the selected confirmation after an explicit user action.
 
-An account can also be provisioned by signing in with its account name and password. The sign-in accepts the guard code that Steam sends, and the resulting session can enrol a new authenticator, remove an existing one with its revocation code, or recover access when the device that held Steam Guard is no longer available. The password is used only for the encrypted exchange and is never stored.
+An account can also be provisioned by signing in with its account name and password. The sign-in accepts the guard that Steam requests, and the resulting session can enrol a new authenticator, remove an existing one with its revocation code, or recover access when the device that held Steam Guard is no longer available. Signing out revokes the session through Steam and clears the form. The password is used only for the encrypted exchange and is never stored.
 
 ```bash
 dotnet run --project SteamGuardDesktop

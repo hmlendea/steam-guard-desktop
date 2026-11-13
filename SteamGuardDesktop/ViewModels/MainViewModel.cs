@@ -127,6 +127,9 @@ namespace SteamGuardDesktop.ViewModels
             AccountSetup = accountSetupViewModel;
             Recovery = recoveryViewModel;
 
+            recoveryViewModel.AccountSaved += OnRecoveryAccountSaved;
+            recoveryViewModel.PropertyChanged += OnRecoveryPropertyChanged;
+
             ApplyPersistedSettings();
             themeService.ApplyTheme(settings.ThemePreference);
             ticker.Tick += OnTickerTick;
@@ -506,6 +509,8 @@ namespace SteamGuardDesktop.ViewModels
         /// </summary>
         public void ShutDown()
         {
+            Recovery.AccountSaved -= OnRecoveryAccountSaved;
+            Recovery.PropertyChanged -= OnRecoveryPropertyChanged;
             ticker.Tick -= OnTickerTick;
             ticker.Stop();
         }
@@ -527,6 +532,18 @@ namespace SteamGuardDesktop.ViewModels
             IsAccountHiddenWhenInactive = settings.IsAccountHiddenWhenInactive,
             IsSecretRevealAllowed = settings.IsSecretRevealAllowed
         });
+
+        private void OnRecoveryAccountSaved(object? sender, EventArgs arguments) => Load();
+
+        private void OnRecoveryPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs arguments)
+        {
+            if (arguments.PropertyName == nameof(RecoveryViewModel.SignOutRequestCount))
+            {
+                IsAccountHidden = false;
+                OnPropertyChanged(nameof(AreAccountDetailsConcealed));
+                Load();
+            }
+        }
 
         private void OnTickerTick(object? sender, EventArgs arguments)
         {

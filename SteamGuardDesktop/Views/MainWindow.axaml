@@ -196,6 +196,8 @@
                     Click="OnSubmitGuardCodeClick" />
             <Button Content="Complete sign-in"
                     Click="OnCompleteSignInClick" />
+            <Button Content="Sign out"
+                    Click="OnSignOutClick" />
           </StackPanel>
 
           <TextBlock Text="Authenticator"

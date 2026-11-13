@@ -40,6 +40,13 @@ namespace SteamGuardDesktop.Service.Account
         AuthenticatorSecrets? GetSecrets(SteamAccount account);
 
         /// <summary>
+        /// Determines whether an account is already configured.
+        /// </summary>
+        /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>
+        /// <returns><c>true</c> when the account is configured.</returns>
+        bool IsAccountConfigured(string steamIdentifier);
+
+        /// <summary>
         /// Stores the access token that authenticates confirmation requests for an account.
         /// </summary>
         /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>

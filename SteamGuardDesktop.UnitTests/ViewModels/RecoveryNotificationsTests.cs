@@ -91,6 +91,9 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 string accessToken,
                 string smsCode) => AuthenticatorEnrolmentResult.Failed("Not supported by this stub.");
 
+            public AuthenticatorOperationResult RemoveAllGuardCookies(string accessToken) =>
+                AuthenticatorOperationResult.Successful();
+
             public SteamGuardDesktop.Domain.Authenticator.AuthenticatorSecrets CreateSecrets(
                 EnrolledAuthenticator enrolledAuthenticator) => new();
 
@@ -107,6 +110,8 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 AccountSaveResult.Successful(account);
 
             public AccountRemovalResult RemoveAccount(string accountIdentifier) => AccountRemovalResult.Successful();
+
+            public bool IsAccountConfigured(string steamIdentifier) => true;
 
             public SteamGuardDesktop.Domain.Authenticator.AuthenticatorSecrets? GetSecrets(
                 SteamGuardDesktop.Domain.Account.SteamAccount account) => null;

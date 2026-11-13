@@ -147,6 +147,16 @@ namespace SteamGuardDesktop.Service.Account
         }
 
         /// <inheritdoc />
+        public bool IsAccountConfigured(string steamIdentifier)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(steamIdentifier, nameof(steamIdentifier));
+
+            return accountStore
+                .GetAll()
+                .Any(candidate => string.Equals(candidate.SteamIdentifier, steamIdentifier, StringComparison.Ordinal));
+        }
+
+        /// <inheritdoc />
         public AccountAccessTokenResult SaveAccessToken(string steamIdentifier, string accessToken)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(steamIdentifier, nameof(steamIdentifier));

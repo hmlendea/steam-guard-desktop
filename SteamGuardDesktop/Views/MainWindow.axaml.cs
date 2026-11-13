@@ -87,6 +87,9 @@ namespace SteamGuardDesktop.Views
         private void OnRecoverLostDeviceClick(object? sender, RoutedEventArgs arguments)
             => ViewModel?.Recovery.RecoverLostDevice();
 
+        private void OnSignOutClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.SignOut();
+
         private void OnThemePreferenceChanged(object? sender, SelectionChangedEventArgs arguments)
         {
             if (ThemeSelector.SelectedItem is not ThemePreference selectedPreference)

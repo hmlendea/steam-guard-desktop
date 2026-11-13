@@ -145,6 +145,23 @@ namespace SteamGuardDesktop.Service.Authenticator
         }
 
         /// <inheritdoc />
+        public AuthenticatorOperationResult RemoveAllGuardCookies(string accessToken)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(accessToken, nameof(accessToken));
+
+            SteamClientResult<bool> result = authenticationClient.RemoveAllGuardCookies(accessToken);
+
+            if (!result.IsSuccessful)
+            {
+                return AuthenticatorOperationResult.Failed(result.FailureReason);
+            }
+
+            logger.Info(SteamGuardOperation.RemoveAllGuardCookies, OperationStatus.Success);
+
+            return AuthenticatorOperationResult.Successful();
+        }
+
+        /// <inheritdoc />
         public AuthenticatorSecrets CreateSecrets(EnrolledAuthenticator enrolledAuthenticator)
         {
             ArgumentNullException.ThrowIfNull(enrolledAuthenticator, nameof(enrolledAuthenticator));

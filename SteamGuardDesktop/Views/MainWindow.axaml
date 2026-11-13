@@ -20,10 +20,17 @@
   <DockPanel Background="{DynamicResource AppBackgroundBrush}">
     <Border DockPanel.Dock="Bottom"
             Padding="{DynamicResource PagePadding}">
-      <TextBlock Text="{Binding StatusMessage}"
-                 Foreground="{DynamicResource FailureBrush}"
-                 IsVisible="{Binding HasFailure}"
-                 TextWrapping="Wrap" />
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding OutcomeMessage}"
+                   Foreground="{DynamicResource FailureBrush}"
+                   IsVisible="{Binding HasFailure}"
+                   TextWrapping="Wrap" />
+        <TextBlock Text="{Binding OutcomeMessage}"
+                   Foreground="{DynamicResource SuccessBrush}"
+                   AutomationProperties.Name="Successful outcome"
+                   IsVisible="{Binding HasSuccess}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
     </Border>
 
     <StackPanel DockPanel.Dock="Top"

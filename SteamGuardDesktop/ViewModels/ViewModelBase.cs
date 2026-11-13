@@ -13,6 +13,8 @@ namespace SteamGuardDesktop.ViewModels
 
         private string statusMessage = string.Empty;
 
+        private StatusMessageKind statusMessageKind;
+
         /// <summary>
         /// Gets or sets a value indicating whether the view model is performing work.
         /// </summary>
@@ -38,20 +40,63 @@ namespace SteamGuardDesktop.ViewModels
         }
 
         /// <summary>
+        /// Gets or sets the kind of the current status message, which decides how it is presented.
+        /// </summary>
+        public StatusMessageKind StatusMessageKind
+        {
+            get => statusMessageKind;
+            set
+            {
+                if (SetProperty(ref statusMessageKind, value))
+                {
+                    OnPropertyChanged(nameof(IsStatusSuccessful));
+                    OnPropertyChanged(nameof(IsStatusFailure));
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets a value indicating whether a status message is available.
         /// </summary>
         public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
 
         /// <summary>
-        /// Reports a non-sensitive status message to the user.
+        /// Gets a value indicating whether the current status message reports a success.
+        /// </summary>
+        public bool IsStatusSuccessful =>
+            HasStatusMessage && StatusMessageKind == StatusMessageKind.Success;
+
+        /// <summary>
+        /// Gets a value indicating whether the current status message reports a failure.
+        /// </summary>
+        public bool IsStatusFailure =>
+            HasStatusMessage && StatusMessageKind == StatusMessageKind.Failure;
+
+        /// <summary>
+        /// Reports a non-sensitive failure message to the user.
         /// </summary>
         /// <param name="message">The message to display.</param>
-        protected void ReportStatus(string message) => StatusMessage = message;
+        protected void ReportStatus(string message) => ReportStatus(message, StatusMessageKind.Failure);
+
+        /// <summary>
+        /// Reports a non-sensitive status message of the specified kind to the user.
+        /// </summary>
+        /// <param name="message">The message to display.</param>
+        /// <param name="kind">The kind of the message, which decides how it is presented.</param>
+        protected void ReportStatus(string message, StatusMessageKind kind)
+        {
+            StatusMessageKind = kind;
+            StatusMessage = message;
+        }
 
         /// <summary>
         /// Clears the current status message.
         /// </summary>
-        protected void ClearStatus() => StatusMessage = string.Empty;
+        protected void ClearStatus()
+        {
+            StatusMessage = string.Empty;
+            StatusMessageKind = StatusMessageKind.None;
+        }
 
         /// <summary>
         /// Ensures that the supplied value is not null.

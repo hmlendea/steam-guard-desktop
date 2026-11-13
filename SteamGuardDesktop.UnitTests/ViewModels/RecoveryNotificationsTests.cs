@@ -49,9 +49,62 @@ namespace SteamGuardDesktop.UnitTests.Presentation
             Assert.That(changedProperties, Contains.Item("IsCodeRequired"));
         }
 
+        [Test]
+        public void GivenACompletedSignIn_WhenItSucceeds_ThenTheStatusReportsSuccess()
+        {
+            StubLoginService loginService = new()
+            {
+                ChallengeToReturn = new LoginChallenge
+                {
+                    ClientId = "613",
+                    RequestId = "873",
+                    SteamIdentifier = "76561198028572203",
+                    AcceptedGuards = [LoginGuardType.EmailCode]
+                },
+                TokensToReturn = new LoginTokens
+                {
+                    SteamIdentifier = "76561198028572203",
+                    AccessToken = "access-token-value"
+                }
+            };
+
+            RecoveryModel viewModel = new(
+                loginService,
+                new StubAuthenticatorManagementService(),
+                new StubAccountService());
+
+            viewModel.AccountName = "DummyUser";
+            viewModel.Password = "dummy-password";
+            viewModel.BeginSignIn();
+            viewModel.CompleteSignIn();
+
+            Assert.That(viewModel.HasStatusMessage);
+            Assert.That(viewModel.IsStatusSuccessful);
+            Assert.That(viewModel.IsStatusFailure, Is.False);
+        }
+
+        [Test]
+        public void GivenARejectedSignIn_WhenItFails_ThenTheStatusReportsFailure()
+        {
+            RecoveryModel viewModel = new(
+                new StubLoginService(),
+                new StubAuthenticatorManagementService(),
+                new StubAccountService());
+
+            viewModel.AccountName = "DummyUser";
+            viewModel.Password = "dummy-password";
+            viewModel.BeginSignIn();
+
+            Assert.That(viewModel.HasStatusMessage);
+            Assert.That(viewModel.IsStatusFailure);
+            Assert.That(viewModel.IsStatusSuccessful, Is.False);
+        }
+
         private sealed class StubLoginService : ILoginService
         {
             public LoginChallenge? ChallengeToReturn { get; set; }
+
+            public LoginTokens? TokensToReturn { get; set; }
 
             public LoginStartResult BeginLogin(LoginCredentials credentials) =>
                 ChallengeToReturn is null
@@ -64,7 +117,9 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 LoginGuardType guardType) => LoginGuardResult.Successful();
 
             public LoginCompletionResult CompleteLogin(LoginChallenge challenge) =>
-                LoginCompletionResult.Failed("The sign-in is not complete.");
+                TokensToReturn is null
+                    ? LoginCompletionResult.Failed("The sign-in is not complete.")
+                    : LoginCompletionResult.Successful(TokensToReturn);
         }
 
         private sealed class StubAuthenticatorManagementService : IAuthenticatorManagementService

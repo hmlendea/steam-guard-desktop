@@ -210,7 +210,17 @@ namespace SteamGuardDesktop.ViewModels
         /// <summary>
         /// Gets a value indicating whether a failure must be reported to the user.
         /// </summary>
-        public bool HasFailure => !string.IsNullOrWhiteSpace(StatusMessage);
+        public bool HasFailure => Recovery.HasStatusMessage && Recovery.IsStatusFailure;
+
+        /// <summary>
+        /// Gets a value indicating whether a success must be reported to the user.
+        /// </summary>
+        public bool HasSuccess => Recovery.HasStatusMessage && Recovery.IsStatusSuccessful;
+
+        /// <summary>
+        /// Gets the message that reports the outcome of the latest action.
+        /// </summary>
+        public string OutcomeMessage => Recovery.HasStatusMessage ? Recovery.StatusMessage : StatusMessage;
 
         /// <summary>
         /// Gets a value indicating whether account details are currently concealed.
@@ -517,6 +527,14 @@ namespace SteamGuardDesktop.ViewModels
 
         private void OnRecoveryPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs arguments)
         {
+            if (arguments.PropertyName is nameof(RecoveryViewModel.StatusMessage) or
+                nameof(RecoveryViewModel.StatusMessageKind))
+            {
+                OnPropertyChanged(nameof(HasFailure));
+                OnPropertyChanged(nameof(HasSuccess));
+                OnPropertyChanged(nameof(OutcomeMessage));
+            }
+
             if (arguments.PropertyName == nameof(RecoveryViewModel.SignOutRequestCount))
             {
                 IsAccountHidden = false;

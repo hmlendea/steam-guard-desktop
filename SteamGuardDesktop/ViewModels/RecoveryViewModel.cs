@@ -181,7 +181,7 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             IsGuardSubmitted = true;
-            ClearStatus();
+            ReportStatus("The code was accepted. Complete the sign-in to obtain a session.", StatusMessageKind.Success);
         }
 
         /// <summary>
@@ -217,7 +217,9 @@ namespace SteamGuardDesktop.ViewModels
 
             if (!accountService.IsAccountConfigured(SteamIdentifier))
             {
-                ReportStatus("The sign-in succeeded. Enrol or recover an authenticator to save the account and store the access token.");
+                ReportStatus(
+                    "The sign-in succeeded. Enrol or recover an authenticator to save the account and store the access token.",
+                    StatusMessageKind.Success);
 
                 return;
             }
@@ -231,7 +233,9 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
-            ClearStatus();
+            ReportStatus(
+                "The sign-in succeeded and the access token was stored.",
+                StatusMessageKind.Success);
         }
 
         /// <summary>
@@ -276,7 +280,9 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
-            ReportStatus("Steam sent a code to the registered phone number. Enter it to recover the authenticator.");
+            ReportStatus(
+                "Steam sent a code to the registered phone number. Enter it to recover the authenticator.",
+                StatusMessageKind.Success);
         }
 
         /// <summary>
@@ -306,7 +312,7 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             IsRecoveringLostDevice = false;
-            ReportStatus("The authenticator was removed.");
+            ReportStatus("The authenticator was removed.", StatusMessageKind.Success);
         }
 
         /// <summary>
@@ -346,7 +352,8 @@ namespace SteamGuardDesktop.ViewModels
             IssuedRevocationCode = result.Authenticator.RevocationCode;
             ReportStatus(
                 "Steam sent an SMS code to the registered phone number. Store the revocation code shown above, then " +
-                "enter the SMS code and activate the authenticator.");
+                "enter the SMS code and activate the authenticator.",
+                StatusMessageKind.Success);
         }
 
         /// <summary>
@@ -410,7 +417,7 @@ namespace SteamGuardDesktop.ViewModels
             enrolledAuthenticator = null;
             HasPendingActivation = false;
             AccountSaved?.Invoke(this, EventArgs.Empty);
-            ReportStatus("The authenticator was enrolled and the account was saved.");
+            ReportStatus("The authenticator was enrolled and the account was saved.", StatusMessageKind.Success);
         }
 
         /// <summary>
@@ -464,7 +471,7 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             AccountSaved?.Invoke(this, EventArgs.Empty);
-            ReportStatus("The authenticator was recovered and the account was saved.");
+            ReportStatus("The authenticator was recovered and the account was saved.", StatusMessageKind.Success);
         }
 
         /// <summary>

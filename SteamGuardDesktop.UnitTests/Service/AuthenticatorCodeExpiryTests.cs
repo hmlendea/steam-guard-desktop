@@ -88,10 +88,10 @@ namespace SteamGuardDesktop.UnitTests.Service
                     new TOTPSteamGuard(new FixedTimeStepProvider(1L)),
                     clock);
 
-                ViewModel = new ViewModels.AuthenticatorViewModel(generator, clock);
+                ViewModel = new SteamGuardDesktop.ViewModels.AuthenticatorViewModel(generator, clock);
             }
 
-            public ViewModels.AuthenticatorViewModel ViewModel { get; }
+            public SteamGuardDesktop.ViewModels.AuthenticatorViewModel ViewModel { get; }
 
             public void Refresh(string sharedSecret) => ViewModel.Refresh(sharedSecret);
 

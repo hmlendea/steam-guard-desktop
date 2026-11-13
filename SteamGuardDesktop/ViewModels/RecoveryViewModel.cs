@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using SteamGuardDesktop.Domain.Account;
 using SteamGuardDesktop.Domain.Login;
 using SteamGuardDesktop.Service.Account;
 using SteamGuardDesktop.Service.Authenticator;
@@ -131,7 +133,16 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
-            LoginGuardResult result = loginService.SubmitGuardCode(challenge, GuardCode.Trim(), LoginGuardType.EmailCode);
+            LoginGuardType guardType = ComposeGuardType(challenge);
+
+            if (guardType == LoginGuardType.Unsupported)
+            {
+                ReportStatus("Steam did not accept a code for this sign-in. Approve the sign-in on the device instead.");
+
+                return;
+            }
+
+            LoginGuardResult result = loginService.SubmitGuardCode(challenge, GuardCode.Trim(), guardType);
 
             GuardCode = string.Empty;
 
@@ -175,6 +186,17 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             IsSignInStarted = false;
+            IsGuardSubmitted = true;
+
+            AccountAccessTokenResult tokenResult = accountService.SaveAccessToken(SteamIdentifier, AccessToken);
+
+            if (!tokenResult.IsSuccessful)
+            {
+                ReportStatus("The sign-in succeeded, but the access token could not be stored: " + tokenResult.FailureReason);
+
+                return;
+            }
+
             ClearStatus();
         }
 
@@ -263,7 +285,7 @@ namespace SteamGuardDesktop.ViewModels
         }
 
         /// <summary>
-        /// Completes the enrolment with the activation code and the SMS code.
+        /// Completes the enrolment with the activation code generated from the issued shared secret.
         /// </summary>
         public void FinalizeAuthenticator()
         {
@@ -274,11 +296,20 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
+            string? activationCode = authenticatorManagementService.GenerateActivationCode(enrolledAuthenticator);
+
+            if (activationCode is null)
+            {
+                ReportStatus("The authenticator activation code could not be generated.");
+
+                return;
+            }
+
             AuthenticatorOperationResult result = authenticatorManagementService.FinalizeAuthenticator(
                 SteamIdentifier,
                 AccessToken,
-                enrolledAuthenticator.DeviceIdentifier,
-                string.Empty);
+                activationCode,
+                enrolledAuthenticator.DeviceIdentifier);
 
             if (!result.IsSuccessful)
             {
@@ -288,16 +319,16 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             AccountSaveResult saveResult = accountService.SaveAccount(
-                new Domain.Account.SteamAccount
+                new SteamAccount
                 {
                     SteamIdentifier = SteamIdentifier,
-                    Label = AccountName.Trim()
+                    Label = string.IsNullOrWhiteSpace(AccountName) ? SteamIdentifier : AccountName.Trim()
                 },
                 authenticatorManagementService.CreateSecrets(enrolledAuthenticator));
 
             if (!saveResult.IsSuccessful)
             {
-                ReportStatus(saveResult.FailureReason);
+                ReportStatus(ComposeAccountFailure(saveResult));
 
                 return;
             }
@@ -333,16 +364,16 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             AccountSaveResult saveResult = accountService.SaveAccount(
-                new Domain.Account.SteamAccount
+                new SteamAccount
                 {
                     SteamIdentifier = SteamIdentifier,
-                    Label = AccountName.Trim()
+                    Label = string.IsNullOrWhiteSpace(AccountName) ? SteamIdentifier : AccountName.Trim()
                 },
                 authenticatorManagementService.CreateSecrets(result.Authenticator));
 
             if (!saveResult.IsSuccessful)
             {
-                ReportStatus(saveResult.FailureReason);
+                ReportStatus(ComposeAccountFailure(saveResult));
 
                 return;
             }
@@ -372,22 +403,35 @@ namespace SteamGuardDesktop.ViewModels
             IsRecoveryStarted = false;
         }
 
+        private static string ComposeAccountFailure(AccountSaveResult result)
+        {
+            if (!string.IsNullOrWhiteSpace(result.FailureReason))
+            {
+                return result.FailureReason;
+            }
+
+            return string.Join(" ", result.ValidationErrors);
+        }
+
         /// <summary>
-        /// Determines whether a challenge expects a code rather than an in-app approval.
+        /// Selects the guard type that a challenge expects.
         /// </summary>
         /// <param name="loginChallenge">The challenge reported by Steam.</param>
-        /// <returns><c>true</c> when a code must be supplied.</returns>
-        private static bool ContainsCodeGuard(LoginChallenge loginChallenge)
+        /// <returns>The guard type to submit, or <see cref="LoginGuardType.Unsupported"/>.</returns>
+        private static LoginGuardType ComposeGuardType(LoginChallenge loginChallenge)
         {
             foreach (LoginGuardType guardType in loginChallenge.AcceptedGuards)
             {
-                if (guardType == LoginGuardType.EmailCode)
+                if (guardType is LoginGuardType.EmailCode or LoginGuardType.DeviceCode)
                 {
-                    return true;
+                    return guardType;
                 }
             }
 
-            return false;
+            return LoginGuardType.Unsupported;
         }
+
+        private static bool ContainsCodeGuard(LoginChallenge loginChallenge)
+            => ComposeGuardType(loginChallenge) != LoginGuardType.Unsupported;
     }
 }

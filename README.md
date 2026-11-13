@@ -52,6 +52,8 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - Approves or denies an individual confirmation and refreshes the list afterwards.
 - Stores account secrets in the platform credential store and removes them with the account.
 - Signs in to Steam with an account name and password, exchanging the password over an RSA-encrypted request without persisting it.
+- Accepts the guard that Steam requests, whether it is a code sent to the e-mail address or a code from an existing authenticator.
+- Stores the access token that a sign-in issues so that confirmations keep working afterwards.
 - Enrols a Steam Mobile Authenticator and finalises the enrolment with the code that Steam issues.
 - Removes an existing authenticator with its revocation code.
 - Recovers access when the device that held Steam Guard is no longer available.
@@ -263,6 +265,7 @@ See [ROADMAP.md](./ROADMAP.md) for planned work and forthcoming changes.
 | The authenticator panel shows no code | The stored shared secret is missing or not Base32 | Re-enter the shared secret for the account. |
 | A clock warning is displayed | The local clock differs from the Steam clock by more than 30 seconds | Synchronise the operating system clock. |
 | Confirmations cannot be loaded | The Steam access token is missing or expired | Sign in again to obtain a current access token. |
+| The sign-in observes that a code is not accepted | Steam only offered approval on an existing device | Approve the sign-in on the device that holds the authenticator. |
 | The sign-in reports that the credentials are incorrect | The account name or password was mistyped | Check the credentials and start the sign-in again. |
 | The authenticator cannot be enrolled | Steam rejected the activation code or the SMS code was not accepted | Request a new code and complete the enrolment again. |
 | The credential store is reported as unavailable | The desktop session has no reachable Secret Service or Keychain | Unlock the session credential store or use a supported desktop session. |

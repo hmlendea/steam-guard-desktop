@@ -40,6 +40,14 @@ namespace SteamGuardDesktop.Service.Account
         AuthenticatorSecrets? GetSecrets(SteamAccount account);
 
         /// <summary>
+        /// Stores the access token that authenticates confirmation requests for an account.
+        /// </summary>
+        /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>
+        /// <param name="accessToken">The access token issued by Steam. This value is sensitive.</param>
+        /// <returns>The outcome of the operation.</returns>
+        AccountAccessTokenResult SaveAccessToken(string steamIdentifier, string accessToken);
+
+        /// <summary>
         /// Reports the availability of the credential store.
         /// </summary>
         /// <returns>The availability of the credential store.</returns>

@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using NuciLog.Core;
+
 using SteamGuardDesktop.DataAccess.Accounts;
 using SteamGuardDesktop.Domain.Account;
 using SteamGuardDesktop.Domain.Authenticator;
+using SteamGuardDesktop.Logging;
 using SteamGuardDesktop.Service.Authenticator;
 using SteamGuardDesktop.Service.Storage;
 
@@ -17,7 +20,8 @@ namespace SteamGuardDesktop.Service.Account
         IAccountStore accountStore,
         ISecretStore secretStore,
         IDeviceIdentityProvider deviceIdentityProvider,
-        IOtpCodeGenerator otpCodeGenerator) : IAccountService
+        IOtpCodeGenerator otpCodeGenerator,
+        ILogger logger) : IAccountService
     {
         private static string SecretEntryNamePrefix => "SteamGuardDesktop:";
 
@@ -36,6 +40,11 @@ namespace SteamGuardDesktop.Service.Account
 
             if (validationErrors.Count > 0)
             {
+                logger.Warn(
+                    SteamGuardOperation.StoreSecrets,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.FailureReason, string.Join(" ", validationErrors)));
+
                 return AccountSaveResult.Invalid(validationErrors);
             }
 
@@ -60,20 +69,23 @@ namespace SteamGuardDesktop.Service.Account
                 secretStore.Remove(account.SharedSecretName);
                 secretStore.Remove(account.IdentitySecretName);
 
+                logger.Error(
+                    SteamGuardOperation.StoreSecrets,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.SecretStoreAvailability, sharedSecretResult.Availability.ToString()));
+
                 return AccountSaveResult.Failed("The secrets could not be stored in the platform credential store.");
             }
 
-            if (!string.IsNullOrWhiteSpace(secrets.RevocationCode))
-            {
-                secretStore.Store(account.RevocationCodeName, secrets.RevocationCode.Trim());
-            }
-
-            if (!string.IsNullOrWhiteSpace(secrets.AccessToken))
-            {
-                secretStore.Store(account.AccessTokenName, secrets.AccessToken.Trim());
-            }
+            StoreOptionalSecret(account.RevocationCodeName, secrets.RevocationCode);
+            StoreOptionalSecret(account.AccessTokenName, secrets.AccessToken);
 
             accountStore.Save(account);
+
+            logger.Info(
+                SteamGuardOperation.StoreSecrets,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.AccountIdentifier, account.Identifier));
 
             return AccountSaveResult.Successful(account);
         }
@@ -99,6 +111,11 @@ namespace SteamGuardDesktop.Service.Account
 
             accountStore.Remove(accountIdentifier);
 
+            logger.Info(
+                SteamGuardOperation.DeleteSecrets,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.AccountIdentifier, accountIdentifier));
+
             return AccountRemovalResult.Successful();
         }
 
@@ -112,6 +129,11 @@ namespace SteamGuardDesktop.Service.Account
 
             if (string.IsNullOrWhiteSpace(sharedSecret) || string.IsNullOrWhiteSpace(identitySecret))
             {
+                logger.Warn(
+                    SteamGuardOperation.StoreSecrets,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.AccountIdentifier, account.Identifier));
+
                 return null;
             }
 
@@ -125,7 +147,94 @@ namespace SteamGuardDesktop.Service.Account
         }
 
         /// <inheritdoc />
-        public SecretStoreAvailability GetSecretStoreAvailability() => secretStore.GetAvailability();
+        public AccountAccessTokenResult SaveAccessToken(string steamIdentifier, string accessToken)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(steamIdentifier, nameof(steamIdentifier));
+            ArgumentException.ThrowIfNullOrWhiteSpace(accessToken, nameof(accessToken));
+
+            SteamAccount? account = accountStore
+                .GetAll()
+                .FirstOrDefault(candidate => string.Equals(candidate.SteamIdentifier, steamIdentifier, StringComparison.Ordinal));
+
+            if (account is null)
+            {
+                return AccountAccessTokenResult.Failed("The account is not configured.");
+            }
+
+            if (string.IsNullOrWhiteSpace(account.AccessTokenName))
+            {
+                account.AccessTokenName = ComposeEntryName(account.Identifier, "access-token");
+                accountStore.Save(account);
+            }
+
+            SecretStoreResult result = secretStore.Store(account.AccessTokenName, accessToken.Trim());
+
+            if (!result.IsSuccessful)
+            {
+                logger.Error(
+                    SteamGuardOperation.StoreSecrets,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.SecretStoreAvailability, result.Availability.ToString()));
+
+                return AccountAccessTokenResult.Failed(
+                    "The access token could not be stored in the platform credential store.");
+            }
+
+            logger.Info(
+                SteamGuardOperation.StoreSecrets,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.AccountIdentifier, account.Identifier));
+
+            return AccountAccessTokenResult.Successful();
+        }
+
+        /// <inheritdoc />
+        public SecretStoreAvailability GetSecretStoreAvailability()
+        {
+            SecretStoreAvailability availability = secretStore.GetAvailability();
+
+            logger.Debug(
+                SteamGuardOperation.ReadSecretStoreStatus,
+                new LogInfo(SteamGuardInfoKey.SecretStoreAvailability, availability.ToString()));
+
+            return availability;
+        }
+
+        private static string ComposeEntryName(string accountIdentifier, string secretKind) =>
+            $"{SecretEntryNamePrefix}{accountIdentifier}:{secretKind}";
+
+        private static bool IsValidSteamIdentifier(string steamIdentifier)
+        {
+            if (steamIdentifier.Length != SteamIdentifierLength)
+            {
+                return false;
+            }
+
+            return steamIdentifier.All(char.IsAsciiDigit);
+        }
+
+        private static bool IsValidIdentitySecret(string identitySecret)
+        {
+            if (string.IsNullOrWhiteSpace(identitySecret))
+            {
+                return false;
+            }
+
+            Span<byte> decodedBytes = new byte[identitySecret.Length];
+
+            return Convert.TryFromBase64String(identitySecret.Trim(), decodedBytes, out int writtenBytes) &&
+                writtenBytes > 0;
+        }
+
+        private void StoreOptionalSecret(string entryName, string value)
+        {
+            if (string.IsNullOrWhiteSpace(entryName) || string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            secretStore.Store(entryName, value.Trim());
+        }
 
         private List<string> ValidateAccount(SteamAccount account, AuthenticatorSecrets secrets)
         {
@@ -163,31 +272,5 @@ namespace SteamGuardDesktop.Service.Account
                 .Any(candidate =>
                     string.Equals(candidate.SteamIdentifier, account.SteamIdentifier.Trim(), StringComparison.Ordinal) &&
                     !string.Equals(candidate.Identifier, account.Identifier, StringComparison.Ordinal));
-
-        private static bool IsValidSteamIdentifier(string steamIdentifier)
-        {
-            if (steamIdentifier.Length != SteamIdentifierLength)
-            {
-                return false;
-            }
-
-            return steamIdentifier.All(char.IsAsciiDigit);
-        }
-
-        private static bool IsValidIdentitySecret(string identitySecret)
-        {
-            if (string.IsNullOrWhiteSpace(identitySecret))
-            {
-                return false;
-            }
-
-            Span<byte> decodedBytes = new byte[identitySecret.Length];
-
-            return Convert.TryFromBase64String(identitySecret.Trim(), decodedBytes, out int writtenBytes) &&
-                writtenBytes > 0;
-        }
-
-        private static string ComposeEntryName(string accountIdentifier, string secretKind) =>
-            $"{SecretEntryNamePrefix}{accountIdentifier}:{secretKind}";
     }
 }

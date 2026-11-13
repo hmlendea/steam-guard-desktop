@@ -268,7 +268,7 @@ sequenceDiagram
     ViewModel->>Management: CreateSecrets
 ```
 
-The password is encrypted with the RSA public key that Steam publishes, is used only for the exchange, and is cleared from the form as soon as the sign-in starts. Recovery of a device that is no longer available is issued through the challenge endpoints rather than the revocation code, and the issued authenticator is stored with the same secret store that a manual account setup uses.
+The password is encrypted with the RSA public key that Steam publishes, is used only for the exchange, and is cleared from the form as soon as the sign-in starts. The guard type is selected from the guards that Steam reports, so a code sent to the e-mail address and a code from an existing authenticator are both supported, while a challenge that only accepts an in-app approval reports that a code cannot be used. The access token that the sign-in issues is stored in the credential store, so confirmations keep working after the sign-in finishes. Recovery of a device that is no longer available is issued through the challenge endpoints rather than the revocation code, and the issued authenticator is stored with the same secret store that a manual account setup uses.
 
 ### Code Generation
 
@@ -393,7 +393,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, theme resolution, accent colour reading, HTML-to-text conversion, secret redaction, password encryption, request payload construction, and account validation. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, and source-file conventions.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, theme resolution, accent colour reading, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, and source-file conventions.
 
 Execute the principal automated verification with:
 

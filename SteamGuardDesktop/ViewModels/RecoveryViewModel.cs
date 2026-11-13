@@ -60,9 +60,6 @@ namespace SteamGuardDesktop.ViewModels
         private bool isRecoveringLostDevice;
 
         [ObservableProperty]
-        private bool isRecoveryStarted;
-
-        [ObservableProperty]
         private string steamIdentifier = string.Empty;
 
         /// <summary>
@@ -222,7 +219,14 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             IsRecoveringLostDevice = statusResult.Status?.HasMobileAuthenticator == true;
-            IsRecoveryStarted = true;
+
+            if (!IsRecoveringLostDevice)
+            {
+                ReportStatus("No mobile authenticator is attached to this account.");
+
+                return;
+            }
+
             ClearStatus();
         }
 
@@ -400,7 +404,6 @@ namespace SteamGuardDesktop.ViewModels
             IsGuardSubmitted = false;
             IsGuardCodeRequired = false;
             IsRecoveringLostDevice = false;
-            IsRecoveryStarted = false;
         }
 
         private static string ComposeAccountFailure(AccountSaveResult result)
@@ -433,5 +436,8 @@ namespace SteamGuardDesktop.ViewModels
 
         private static bool ContainsCodeGuard(LoginChallenge loginChallenge)
             => ComposeGuardType(loginChallenge) != LoginGuardType.Unsupported;
+
+        /// <inheritdoc />
+        partial void OnIsGuardCodeRequiredChanged(bool value) => OnPropertyChanged(nameof(IsCodeRequired));
     }
 }

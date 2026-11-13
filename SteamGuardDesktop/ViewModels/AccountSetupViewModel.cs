@@ -94,6 +94,19 @@ namespace SteamGuardDesktop.ViewModels
         }
 
         /// <summary>
+        /// Reports that the reveal preference has changed.
+        /// </summary>
+        public void NotifySecretRevealAvailabilityChanged()
+        {
+            if (!settings.IsSecretRevealAllowed)
+            {
+                AreSecretsRevealed = false;
+            }
+
+            OnPropertyChanged(nameof(IsSecretRevealAllowed));
+        }
+
+        /// <summary>
         /// Toggles the visibility of the entered secrets when the reveal preference allows it.
         /// </summary>
         public void ToggleSecretVisibility()

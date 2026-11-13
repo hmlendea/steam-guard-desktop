@@ -112,7 +112,7 @@ dotnet test SteamGuardDesktop.slnx
 
 ## ⚙️ Configuration
 
-Account settings are stored by the application, and the runtime settings are declared in `SteamGuardSettings` and `DiagnosticsSettings`. The secrets themselves are never written to these files.
+Account settings are stored by the application, and the runtime settings are declared in `SteamGuardSettings` and `DiagnosticsSettings`. The secrets themselves are never written to these files. The theme preference and the two privacy preferences are persisted in `settings.json` in the user application-data directory and are changed through the controls in the window.
 
 ### Settings
 
@@ -123,8 +123,9 @@ The subsequent settings are recognised:
 | Steam Guard | `SteamCommunityBaseAddress` | `string` | `https://steamcommunity.com/` | Yes | Base address used for the confirmation endpoints. |
 | Steam Guard | `NetworkTimeoutSeconds` | `int` | `30` | Yes | Timeout applied to Steam web requests. |
 | Steam Guard | `MaximumResponseBytes` | `int` | `1048576` | Yes | Maximum accepted size of a Steam response. |
-| Steam Guard | `IsAccountHiddenWhenInactive` | `bool` | `true` | No | Hides account details while the window is inactive. |
-| Steam Guard | `IsSecretRevealAllowed` | `bool` | `false` | No | Allows secrets to be revealed on explicit request. |
+| Steam Guard | `IsAccountHiddenWhenInactive` | `bool` | `true` | No | Hides account details while the window is inactive. Persisted in `settings.json`. |
+| Steam Guard | `IsSecretRevealAllowed` | `bool` | `false` | No | Allows secrets to be revealed on explicit request. Persisted in `settings.json`. |
+| Steam Guard | `ThemePreference` | `ThemePreference` | `System` | No | Selects the System, Light, or Dark theme. Persisted in `settings.json`. |
 | Diagnostics | `MinimumLevel` | `LogLevel` | `Info` | Yes | Minimum severity written to diagnostics. |
 | Diagnostics | `IsFileOutputEnabled` | `bool` | `true` | No | Writes diagnostics to a log file in addition to the console. |
 | Diagnostics | `LogFilePath` | `string` | `steamguarddesktop.log` | No | Path of the diagnostics log file. |
@@ -160,13 +161,14 @@ For the detailed description of how the application handles privacy and personal
 | Steam access token | Authenticate confirmation requests | Platform credential store, or the encrypted fallback | Until the account is removed | Yes |
 | Revocation code | Remove the authenticator from the account | Platform credential store, or the encrypted fallback | Until the account is removed | Yes |
 | Confirmation details | Describe a pending confirmation before a decision | In memory only | Discarded when the confirmation list is refreshed | Yes |
+| Theme and privacy preferences | Reproduce the interface and data-handling preferences | `settings.json` in the user application-data directory | Until the file is deleted | Yes |
 | Diagnostics | Report failures without exposing secrets | Console and optional log file | Until the log file is deleted | Yes |
 
 ### Data Locations
 
 | Platform or Scope | Location | Contents |
 |-------------------|----------|----------|
-| Linux, macOS, and Windows | The user application-data directory, under `SteamGuardDesktop` | Encrypted account metadata and the encrypted secret fallback |
+| Linux, macOS, and Windows | The user application-data directory, under `SteamGuardDesktop` | Encrypted account metadata, the encrypted secret fallback, and the preference file |
 | Linux, macOS, and Windows | The native credential store | Shared, identity, revocation, and access secrets |
 | All platforms | The configured diagnostics log file | Redacted operations and status fields |
 

@@ -12,6 +12,7 @@ using SteamGuardDesktop.Domain.Authenticator;
 using SteamGuardDesktop.Domain.Confirmations;
 using SteamGuardDesktop.Logging;
 using SteamGuardDesktop.Service.Account;
+using SteamGuardDesktop.Service.Configuration;
 using SteamGuardDesktop.Service.Confirmations;
 using SteamGuardDesktop.Service.Platform;
 using SteamGuardDesktop.Service.Storage;
@@ -38,6 +39,8 @@ namespace SteamGuardDesktop.ViewModels
         private readonly ITicker ticker;
 
         private readonly SteamGuardSettings settings;
+
+        private readonly ISettingsStore settingsStore;
 
         private readonly ILogger logger;
 
@@ -66,9 +69,6 @@ namespace SteamGuardDesktop.ViewModels
         private bool isDecisionInProgress;
 
         [ObservableProperty]
-        private bool isDetailsLoading;
-
-        [ObservableProperty]
         private string confirmationDetails = string.Empty;
 
         /// <summary>
@@ -84,6 +84,7 @@ namespace SteamGuardDesktop.ViewModels
         /// <param name="clockDriftService">The service that compares the local clock with the Steam clock.</param>
         /// <param name="ticker">The ticker that drives the countdown.</param>
         /// <param name="settings">The application settings.</param>
+        /// <param name="settingsStore">The store that persists the user settings.</param>
         /// <param name="logger">The diagnostics logger.</param>
         public MainViewModel(
             IAccountService accountService,
@@ -96,6 +97,7 @@ namespace SteamGuardDesktop.ViewModels
             IClockDriftService clockDriftService,
             ITicker ticker,
             SteamGuardSettings settings,
+            ISettingsStore settingsStore,
             ILogger logger)
         {
             ArgumentNullException.ThrowIfNull(accountService, nameof(accountService));
@@ -108,6 +110,7 @@ namespace SteamGuardDesktop.ViewModels
             ArgumentNullException.ThrowIfNull(clockDriftService, nameof(clockDriftService));
             ArgumentNullException.ThrowIfNull(ticker, nameof(ticker));
             ArgumentNullException.ThrowIfNull(settings, nameof(settings));
+            ArgumentNullException.ThrowIfNull(settingsStore, nameof(settingsStore));
             ArgumentNullException.ThrowIfNull(logger, nameof(logger));
 
             this.accountService = accountService;
@@ -117,14 +120,57 @@ namespace SteamGuardDesktop.ViewModels
             this.clockDriftService = clockDriftService;
             this.ticker = ticker;
             this.settings = settings;
+            this.settingsStore = settingsStore;
             this.logger = logger;
 
             Authenticator = authenticatorViewModel;
             AccountSetup = accountSetupViewModel;
             Recovery = recoveryViewModel;
-            ThemePreference = settings.ThemePreference;
+
+            ApplyPersistedSettings();
             themeService.ApplyTheme(settings.ThemePreference);
             ticker.Tick += OnTickerTick;
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether account details are hidden while the window is inactive.
+        /// </summary>
+        public bool IsAccountLockingEnabled
+        {
+            get => settings.IsAccountHiddenWhenInactive;
+
+            set
+            {
+                if (settings.IsAccountHiddenWhenInactive == value)
+                {
+                    return;
+                }
+
+                settings.IsAccountHiddenWhenInactive = value;
+                OnPropertyChanged();
+                PersistSettings();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether secrets may be revealed on explicit request.
+        /// </summary>
+        public bool IsSecretRevealEnabled
+        {
+            get => settings.IsSecretRevealAllowed;
+
+            set
+            {
+                if (settings.IsSecretRevealAllowed == value)
+                {
+                    return;
+                }
+
+                settings.IsSecretRevealAllowed = value;
+                OnPropertyChanged();
+                AccountSetup.NotifySecretRevealAvailabilityChanged();
+                PersistSettings();
+            }
         }
 
         /// <summary>
@@ -366,13 +412,13 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
-            IsDetailsLoading = true;
+            IsBusy = true;
 
             ConfirmationDetailsResult result = confirmationService.GetConfirmationDetails(
                 SelectedAccount.Account,
                 SelectedConfirmation.Confirmation.Identifier);
 
-            IsDetailsLoading = false;
+            IsBusy = false;
 
             if (!result.IsSuccessful)
             {
@@ -444,6 +490,7 @@ namespace SteamGuardDesktop.ViewModels
         {
             ThemePreference = themePreferenceValue;
             settings.ThemePreference = themePreferenceValue;
+            PersistSettings();
 
             CurrentTheme = themeService.ApplyTheme(themePreferenceValue);
             AccentColour = themeService.GetAccentColour();
@@ -462,6 +509,24 @@ namespace SteamGuardDesktop.ViewModels
             ticker.Tick -= OnTickerTick;
             ticker.Stop();
         }
+
+        private void ApplyPersistedSettings()
+        {
+            SettingsSnapshot snapshot = settingsStore.Load();
+
+            settings.ThemePreference = snapshot.ThemePreference;
+            settings.IsAccountHiddenWhenInactive = snapshot.IsAccountHiddenWhenInactive;
+            settings.IsSecretRevealAllowed = snapshot.IsSecretRevealAllowed;
+
+            ThemePreference = snapshot.ThemePreference;
+        }
+
+        private void PersistSettings() => settingsStore.Save(new SettingsSnapshot
+        {
+            ThemePreference = settings.ThemePreference,
+            IsAccountHiddenWhenInactive = settings.IsAccountHiddenWhenInactive,
+            IsSecretRevealAllowed = settings.IsSecretRevealAllowed
+        });
 
         private void OnTickerTick(object? sender, EventArgs arguments)
         {

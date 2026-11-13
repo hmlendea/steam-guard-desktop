@@ -15,6 +15,7 @@ using SteamGuardDesktop.DataAccess.Accounts;
 using SteamGuardDesktop.Logging;
 using SteamGuardDesktop.Service.Account;
 using SteamGuardDesktop.Service.Authenticator;
+using SteamGuardDesktop.Service.Configuration;
 using SteamGuardDesktop.Service.Confirmations;
 using SteamGuardDesktop.Service.Diagnostics;
 using SteamGuardDesktop.Service.Login;
@@ -38,6 +39,8 @@ namespace SteamGuardDesktop
         private static string AccountStoreFileName => "accounts.bin";
 
         private static string SecretStoreFileName => "secrets.bin";
+
+        private static string SettingsStoreFileName => "settings.json";
 
         /// <summary>
         /// Creates the service provider used by the application.
@@ -79,6 +82,9 @@ namespace SteamGuardDesktop
             services.AddSingleton<IAccountStore>(_ => new EncryptedFileAccountStore(
                 System.IO.Path.Combine(dataDirectory, AccountStoreFileName),
                 keySeed));
+
+            services.AddSingleton<ISettingsStore>(_ => new JsonFileSettingsStore(
+                System.IO.Path.Combine(dataDirectory, SettingsStoreFileName)));
 
             services.AddSingleton<IAccountService, AccountService>();
             services.AddSingleton<IConfirmationService, ConfirmationService>();

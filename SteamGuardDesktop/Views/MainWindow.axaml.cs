@@ -28,7 +28,7 @@ namespace SteamGuardDesktop.Views
             InitializeComponent();
 
             ThemeSelector.ItemsSource = ThemePreferences;
-            ThemeSelector.SelectedIndex = 0;
+            ThemeSelector.SelectedIndex = Array.IndexOf(ThemePreferences, ThemePreference.System);
             Deactivated += OnWindowDeactivated;
             Closed += OnWindowClosed;
         }
@@ -90,6 +90,11 @@ namespace SteamGuardDesktop.Views
         private void OnThemePreferenceChanged(object? sender, SelectionChangedEventArgs arguments)
         {
             if (ThemeSelector.SelectedItem is not ThemePreference selectedPreference)
+            {
+                return;
+            }
+
+            if (ViewModel?.ThemePreference == selectedPreference)
             {
                 return;
             }

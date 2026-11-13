@@ -335,13 +335,14 @@ Failures are translated into result objects with safe reasons at the boundary th
 
 | Configuration Area | Source | Responsibility | Supersede or Secret Policy |
 |--------------------|--------|----------------|---------------------------|
-| `SteamGuardSettings` | In-code defaults, created by the composition root | Base addresses, network timeout, response size limit, and privacy toggles | Contains no secrets |
+| `SteamGuardSettings` | In-code defaults, created by the composition root, superseded by the persisted preference file | Base addresses, network timeout, response size limit, and privacy toggles | Contains no secrets |
 | `DiagnosticsSettings` | In-code defaults, created by the composition root | Minimum level, line format, and log file path | Never contains secrets |
+| User preferences | `settings.json` in the user application-data directory | Theme preference, inactive-window lock, and secret reveal | Contains no secrets; every secret lives in the credential store |
 | Account metadata | Encrypted account file | Labels, identifiers, device identifiers, and secret entry names | Secret entry names only; values live in the credential store |
 
 ### Concurrency and Resource Use
 
-The application is single-user and single-process. Services are registered as singletons, a single `HttpClient` instance is reused with an explicit timeout, and confirmation decisions are serialised by the in-progress guard in the view model. Response payloads larger than the configured limit are rejected.
+The application is single-user and single-process. Services are registered as singletons, a single `HttpClient` instance is reused with an explicit timeout, and confirmation decisions are serialised by the in-progress guard in the view model. Confirmation actions are disabled and an indeterminate progress indicator is shown while a request is in flight. Response payloads larger than the configured limit are rejected.
 
 ## 🧭 Dependency Direction and Rules
 

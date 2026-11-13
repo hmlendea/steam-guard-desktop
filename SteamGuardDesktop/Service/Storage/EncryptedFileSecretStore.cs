@@ -51,8 +51,18 @@ namespace SteamGuardDesktop.Service.Storage
             ArgumentException.ThrowIfNullOrWhiteSpace(entryName, nameof(entryName));
             ArgumentNullException.ThrowIfNull(value, nameof(value));
 
+            string? previousValue = entries.TryGetValue(entryName, out string? existingValue) ? existingValue : null;
+
             entries[entryName] = value;
-            PersistEntries();
+
+            if (!TryPersistEntries())
+            {
+                RestoreEntry(entryName, previousValue);
+
+                return SecretStoreResult.Failed(
+                    SecretStoreAvailability.Available,
+                    "The encrypted secret file could not be written.");
+            }
 
             return SecretStoreResult.Successful();
         }
@@ -75,8 +85,18 @@ namespace SteamGuardDesktop.Service.Storage
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(entryName, nameof(entryName));
 
+            string? previousValue = entries.TryGetValue(entryName, out string? existingValue) ? existingValue : null;
+
             entries.Remove(entryName);
-            PersistEntries();
+
+            if (!TryPersistEntries())
+            {
+                RestoreEntry(entryName, previousValue);
+
+                return SecretStoreResult.Failed(
+                    SecretStoreAvailability.Available,
+                    "The encrypted secret file could not be written.");
+            }
 
             return SecretStoreResult.Successful();
         }
@@ -165,6 +185,36 @@ namespace SteamGuardDesktop.Service.Storage
             }
 
             File.WriteAllBytes(filePath, payload);
+        }
+
+        private bool TryPersistEntries()
+        {
+            try
+            {
+                PersistEntries();
+
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        private void RestoreEntry(string entryName, string? previousValue)
+        {
+            if (previousValue is null)
+            {
+                entries.Remove(entryName);
+
+                return;
+            }
+
+            entries[entryName] = previousValue;
         }
 
         private byte[] SerialiseEntries()

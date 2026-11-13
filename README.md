@@ -83,6 +83,7 @@ dotnet run --project SteamGuardDesktop
 - Only confirmation types that Steam reports with a known numeric identifier can be approved or denied; unknown types are listed but not actionable.
 - When the platform credential store is unavailable, secrets are kept in an encrypted file whose key is derived from machine and user identifiers, which is weaker than a hardware-backed store.
 - The encrypted files cannot be read on another machine or after a user rename. An unreadable file is moved to a `.unreadable` sibling at startup so that the application still starts with empty state, and it must be removed before its secrets can be used again.
+- When the data directory cannot be written, saving an account, a secret, or a preference reports the failure instead of crashing; the in-memory state is rolled back so that it never disagrees with what is on disk.
 - Steam protocol behaviour is validated against the current endpoints only; an endpoint change requires a client update.
 - Recovery of an authenticator on a device that is no longer available depends on the codes that Steam sends to the registered e-mail address, phone number, or authenticator.
 
@@ -305,6 +306,7 @@ See [ROADMAP.md](./ROADMAP.md) for planned work and forthcoming changes.
 | The authenticator cannot be enrolled | Steam rejected the activation code or the SMS code was not accepted | Request a new code and complete the enrolment again. |
 | The credential store is reported as unavailable | The desktop session has no reachable Secret Service or Keychain | Unlock the session credential store or use a supported desktop session. |
 | The account list is empty after moving the data directory from another machine | The encrypted files are bound to the machine and user identifiers, so they cannot be decrypted elsewhere | Remove the `.unreadable` sibling files and add the accounts again. |
+| Saving an account, a secret, or a preference reports that it could not be written | The data directory is read-only, on a full disk, or otherwise protected | Restore write access to the data directory and repeat the action. |
 
 ## 🤝 Contributing
 

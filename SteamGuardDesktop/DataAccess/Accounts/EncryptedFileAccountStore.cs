@@ -63,6 +63,7 @@ namespace SteamGuardDesktop.DataAccess.Accounts
             }
 
             int existingIndex = accounts.FindIndex(candidate => string.Equals(candidate.Identifier, account.Identifier, StringComparison.Ordinal));
+            SteamAccount? previousAccount = existingIndex < 0 ? null : accounts[existingIndex];
 
             if (existingIndex < 0)
             {
@@ -73,9 +74,14 @@ namespace SteamGuardDesktop.DataAccess.Accounts
                 accounts[existingIndex] = account;
             }
 
-            PersistAccounts();
+            if (TryPersistAccounts())
+            {
+                return account;
+            }
 
-            return account;
+            RestoreAccount(account.Identifier, previousAccount);
+
+            throw new IOException($"The encrypted account file at {filePath} could not be written.");
         }
 
         /// <inheritdoc />
@@ -91,9 +97,12 @@ namespace SteamGuardDesktop.DataAccess.Accounts
                 return false;
             }
 
-            PersistAccounts();
+            if (TryPersistAccounts())
+            {
+                return true;
+            }
 
-            return true;
+            throw new IOException($"The encrypted account file at {filePath} could not be written.");
         }
 
         /// <inheritdoc />
@@ -107,8 +116,18 @@ namespace SteamGuardDesktop.DataAccess.Accounts
         /// <inheritdoc />
         public void Clear()
         {
+            List<SteamAccount> previousAccounts = [.. accounts];
+
             accounts.Clear();
-            PersistAccounts();
+
+            if (TryPersistAccounts())
+            {
+                return;
+            }
+
+            accounts.AddRange(previousAccounts);
+
+            throw new IOException($"The encrypted account file at {filePath} could not be written.");
         }
 
         private static byte[] DeriveKey(string keySeed)
@@ -172,6 +191,35 @@ namespace SteamGuardDesktop.DataAccess.Accounts
             }
 
             File.WriteAllBytes(filePath, payload);
+        }
+
+        private bool TryPersistAccounts()
+        {
+            try
+            {
+                PersistAccounts();
+
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        private void RestoreAccount(string accountIdentifier, SteamAccount? previousAccount)
+        {
+            accounts.RemoveAll(candidate =>
+                string.Equals(candidate.Identifier, accountIdentifier, StringComparison.Ordinal));
+
+            if (previousAccount is not null)
+            {
+                accounts.Add(previousAccount);
+            }
         }
     }
 }

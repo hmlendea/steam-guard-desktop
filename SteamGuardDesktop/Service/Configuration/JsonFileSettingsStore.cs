@@ -58,18 +58,31 @@ namespace SteamGuardDesktop.Service.Configuration
         }
 
         /// <inheritdoc />
-        public void Save(SettingsSnapshot snapshot)
+        public bool Save(SettingsSnapshot snapshot)
         {
             ArgumentNullException.ThrowIfNull(snapshot, nameof(snapshot));
 
             string? directory = Path.GetDirectoryName(filePath);
 
-            if (!string.IsNullOrWhiteSpace(directory))
+            try
             {
-                Directory.CreateDirectory(directory);
-            }
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
 
-            File.WriteAllText(filePath, JsonSerializer.Serialize(snapshot, SerializerOptions));
+                File.WriteAllText(filePath, JsonSerializer.Serialize(snapshot, SerializerOptions));
+
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
         }
     }
 }

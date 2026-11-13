@@ -494,11 +494,24 @@ namespace SteamGuardDesktop.ViewModels
             settings.IsSecretRevealAllowed = snapshot.IsSecretRevealAllowed;
         }
 
-        private void PersistSettings() => settingsStore.Save(new SettingsSnapshot
+        private void PersistSettings()
         {
-            IsAccountHiddenWhenInactive = settings.IsAccountHiddenWhenInactive,
-            IsSecretRevealAllowed = settings.IsSecretRevealAllowed
-        });
+            bool wasSaved = settingsStore.Save(new SettingsSnapshot
+            {
+                IsAccountHiddenWhenInactive = settings.IsAccountHiddenWhenInactive,
+                IsSecretRevealAllowed = settings.IsSecretRevealAllowed
+            });
+
+            if (!wasSaved)
+            {
+                logger.Warn(
+                    SteamGuardOperation.StoreSecrets,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.FailureReason, "The settings file could not be written."));
+
+                ReportStatus("The preference could not be saved to disk.");
+            }
+        }
 
         private void OnRecoveryAccountSaved(object? sender, EventArgs arguments) => Load();
 

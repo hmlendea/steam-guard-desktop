@@ -15,6 +15,7 @@ namespace SteamGuardDesktop.Service.Configuration
         /// Saves the supplied settings.
         /// </summary>
         /// <param name="snapshot">The settings to save.</param>
-        void Save(SettingsSnapshot snapshot);
+        /// <returns><c>true</c> when the settings were written.</returns>
+        bool Save(SettingsSnapshot snapshot);
     }
 }

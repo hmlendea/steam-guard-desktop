@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 using NuciLog.Core;
@@ -20,7 +21,9 @@ namespace SteamGuardDesktop.Service.Account
         IAccountStore accountStore,
         ISecretStore secretStore,
         IDeviceIdentityProvider deviceIdentityProvider,
-        IOtpCodeGenerator otpCodeGenerator,        IAccountConfigurationReader configurationReader,        ILogger logger) : IAccountService
+        IOtpCodeGenerator otpCodeGenerator,
+        IAccountConfigurationReader configurationReader,
+        ILogger logger) : IAccountService
     {
         private static string SecretEntryNamePrefix => "SteamGuardDesktop:";
 
@@ -79,7 +82,19 @@ namespace SteamGuardDesktop.Service.Account
             StoreOptionalSecret(account.RevocationCodeName, secrets.RevocationCode);
             StoreOptionalSecret(account.AccessTokenName, secrets.AccessToken);
 
-            accountStore.Save(account);
+            try
+            {
+                accountStore.Save(account);
+            }
+            catch (IOException exception)
+            {
+                logger.Error(
+                    SteamGuardOperation.StoreSecrets,
+                    exception,
+                    new LogInfo(SteamGuardInfoKey.FailureReason, "The account metadata could not be written."));
+
+                return AccountSaveResult.Failed("The account could not be saved to disk.");
+            }
 
             logger.Info(
                 SteamGuardOperation.StoreSecrets,
@@ -108,7 +123,19 @@ namespace SteamGuardDesktop.Service.Account
             secretStore.Remove(account.RevocationCodeName);
             secretStore.Remove(account.AccessTokenName);
 
-            accountStore.Remove(accountIdentifier);
+            try
+            {
+                accountStore.Remove(accountIdentifier);
+            }
+            catch (IOException exception)
+            {
+                logger.Error(
+                    SteamGuardOperation.DeleteSecrets,
+                    exception,
+                    new LogInfo(SteamGuardInfoKey.FailureReason, "The account metadata could not be written."));
+
+                return AccountRemovalResult.Failed("The account could not be removed from disk.");
+            }
 
             logger.Info(
                 SteamGuardOperation.DeleteSecrets,

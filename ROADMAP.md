@@ -20,6 +20,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 - **In Progress**: Live account validation - Verify that a generated code matches the official Steam authenticator for the same time window.
 - **In Progress**: Platform credential validation - Verify secret storage on Linux, macOS, and Windows; the Linux Secret Service round trip is verified and the fallback file is now recovered rather than fatal.
 - **In Progress**: Transport hardening - Reject a Steam response before it is buffered; the accepted-size limit is now enforced while reading and the live endpoints still need to be re-checked against a real session.
+- **In Progress**: Storage failure handling - Report a write that the host refuses and roll the in-memory state back instead of crashing; the remaining work is a check on a real read-only or full disk.
 
 ## 🗺️ Planned Labour
 
@@ -47,6 +48,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 | Packaged distribution | Next 30 days | A published release produces a packaged build for every supported runtime identifier; the local release script already produces the seven expected archives. | In Progress |
 | Platform credential validation | Next quarter | Verified secret storage on Linux, macOS, and Windows; the Linux Secret Service round trip is verified and unreadable state files no longer abort startup. | In Progress |
 | Transport hardening | Next 30 days | A Steam response that exceeds the accepted size is rejected before it is buffered, and the live endpoints are re-checked against a real session. | In Progress |
+| Storage failure handling | Next 30 days | A write that the host refuses becomes a reported failure with the in-memory state restored, verified on a read-only directory and file. | In Progress |
 
 ## ⚠️ Dependencies and Risks
 
@@ -58,6 +60,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 - Unsigned release artefacts - The release script produces unsigned archives, so hosts report an unknown publisher - Publish a checksum beside each archive and document the verification step for users.
 - Machine-bound encrypted fallback - The fallback key is derived from the machine and user identifiers, so a copied or renamed profile cannot be decrypted - Move an unreadable file aside at startup and document that the affected accounts must be added again.
 - Shared release script duplication - The workflow and `release.sh` name the script through two different upstream URLs that currently serve identical content - Keep both verified against each other and prefer the URL the release script itself uses.
+- Unwritable data directory - A read-only or full data directory refuses every save - Report the failure, roll the in-memory state back, and keep the user's stored accounts intact.
 
 ## 🚫 Out of Scope
 

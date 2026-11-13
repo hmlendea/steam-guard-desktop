@@ -184,6 +184,7 @@ Boundary rules:
 - Must never persist a secret in plain text.
 - Must report unavailability instead of silently discarding a secret.
 - Must never lose a protected file silently: an unreadable file is preserved beside the original.
+- Must translate a storage failure into its result type and roll the in-memory state back, so that a read-only or full disk never crashes the application and never leaves state that disagrees with the file.
 
 ### Presentation
 
@@ -325,7 +326,7 @@ Secrets are treated as credentials. They are erased from the setup form after a 
 
 ### Error Handling
 
-Failures are translated into result objects with safe reasons at the boundary that owns them: storage returns `SecretStoreResult`, the Steam client returns `SteamClientResult<TValue>`, and services return their own result types. Expected remote rejections become failed results; transport failures become safe messages. View models surface the reason to the user and never throw to the framework.
+Failures are translated into result objects with safe reasons at the boundary that owns them: storage returns `SecretStoreResult`, the Steam client returns `SteamClientResult<TValue>`, and services return their own result types. Expected remote rejections become failed results; transport failures become safe messages. A storage write that cannot complete is reported through the same result types, and the in-memory state is restored, so the application reports the problem instead of losing consistency or crashing. View models surface the reason to the user and never throw to the framework.
 
 ### Observability
 
@@ -397,7 +398,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, the recovery of a protected file that can no longer be decrypted, and the rejection of a response that exceeds the accepted size before it is buffered. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, the recovery of a protected file that can no longer be decrypted, the rejection of a response that exceeds the accepted size before it is buffered, and the containment of a write that the host refuses. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
 
 Execute the principal automated verification with:
 

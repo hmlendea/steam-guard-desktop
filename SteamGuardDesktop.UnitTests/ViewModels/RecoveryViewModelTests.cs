@@ -191,6 +191,19 @@ namespace SteamGuardDesktop.UnitTests.Presentation
         }
 
         [Test]
+        public void GivenNoRevocationCode_WhenRemovingTheAuthenticator_ThenTheRequestIsRejected()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+
+            viewModel.RemoveAuthenticatorWithRevocationCode();
+
+            Assert.That(managementService.RemoveWasCalled, Is.False);
+            Assert.That(viewModel.HasStatusMessage);
+            Assert.That(viewModel.StatusMessage, Does.Contain("revocation code"));
+        }
+
+        [Test]
         public void GivenNoSignIn_WhenRecoveringALostDevice_ThenTheRequestIsRejected()
         {
             viewModel.RecoverLostDevice();
@@ -386,6 +399,8 @@ namespace SteamGuardDesktop.UnitTests.Presentation
 
             public int AddCallCount { get; private set; }
 
+            public bool RemoveWasCalled { get; private set; }
+
             public bool FinalizeWasCalled { get; private set; }
 
             public bool RecoverWasCalled { get; private set; }
@@ -396,7 +411,12 @@ namespace SteamGuardDesktop.UnitTests.Presentation
             public AuthenticatorOperationResult RemoveAuthenticator(
                 string steamIdentifier,
                 string accessToken,
-                string revocationCode) => AuthenticatorOperationResult.Successful();
+                string revocationCode)
+            {
+                RemoveWasCalled = true;
+
+                return AuthenticatorOperationResult.Successful();
+            }
 
             public AuthenticatorEnrolmentResult AddAuthenticator(string steamIdentifier, string accessToken)
             {

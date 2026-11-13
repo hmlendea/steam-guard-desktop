@@ -69,6 +69,9 @@ namespace SteamGuardDesktop.ViewModels
         private int signOutRequestCount;
 
         [ObservableProperty]
+        private int revocationAttemptsRemaining;
+
+        [ObservableProperty]
         private string steamIdentifier = string.Empty;
 
         /// <summary>
@@ -239,6 +242,41 @@ namespace SteamGuardDesktop.ViewModels
         }
 
         /// <summary>
+        /// Refreshes the reported authenticator status, including the revocation attempts that remain.
+        /// </summary>
+        public void RefreshAuthenticatorStatus()
+        {
+            if (string.IsNullOrWhiteSpace(AccessToken) || string.IsNullOrWhiteSpace(SteamIdentifier))
+            {
+                ReportStatus("Sign in before reading the authenticator status.");
+
+                return;
+            }
+
+            AuthenticatorStatusResult statusResult = authenticatorManagementService.GetStatus(SteamIdentifier, AccessToken);
+
+            if (!statusResult.IsSuccessful || statusResult.Status is null)
+            {
+                ReportStatus(statusResult.FailureReason);
+
+                return;
+            }
+
+            RevocationAttemptsRemaining = statusResult.Status.RevocationAttemptsRemaining;
+
+            if (!statusResult.Status.HasMobileAuthenticator)
+            {
+                ReportStatus("No mobile authenticator is attached to this account.", StatusMessageKind.Success);
+
+                return;
+            }
+
+            ReportStatus(
+                $"A mobile authenticator is attached. {statusResult.Status.RevocationAttemptsRemaining} removal attempts remain.",
+                StatusMessageKind.Success);
+        }
+
+        /// <summary>
         /// Starts the recovery of an authenticator whose device is no longer available.
         /// </summary>
         public void StartLostDeviceRecovery()
@@ -293,6 +331,13 @@ namespace SteamGuardDesktop.ViewModels
             if (string.IsNullOrWhiteSpace(AccessToken))
             {
                 ReportStatus("Sign in before removing the authenticator.");
+
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(RecoveryCode))
+            {
+                ReportStatus("Enter the revocation code of the authenticator before removing it.");
 
                 return;
             }

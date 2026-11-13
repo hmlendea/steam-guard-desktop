@@ -87,7 +87,7 @@ dotnet run --project SteamGuardDesktop
 - The encrypted files cannot be read on another machine or after a user rename. An unreadable file is moved to a `.unreadable` sibling at startup so that the application still starts with empty state, and it must be removed before its secrets can be used again.
 - When the data directory cannot be written, saving an account, a secret, or a preference reports the failure instead of crashing; the in-memory state is rolled back so that it never disagrees with what is on disk.
 - Steam protocol behaviour is validated against the current endpoints only; an endpoint change requires a client update.
-- Enrolling a mobile authenticator requires a phone number on the Steam account, because Steam sends the activation code to that number; an account without one cannot complete enrolment.
+- Enrolling a mobile authenticator requires a phone number on the Steam account, because Steam sends the activation code to that number; an account without one cannot complete enrolment, and a limited account cannot add a phone number at all.
 - Steam Guard codes are computed from the Base32 form of the shared secret, and the byte form that Steam returns during enrolment and recovery is converted to it at the protocol boundary.
 - Recovery of an authenticator on a device that is no longer available depends on the codes that Steam sends to the registered e-mail address, phone number, or authenticator.
 
@@ -309,7 +309,9 @@ See [ROADMAP.md](./ROADMAP.md) for planned work and forthcoming changes.
 | Confirmations cannot be loaded | The Steam access token is missing or expired | Sign in again to obtain a current access token. |
 | The sign-in observes that a code is not accepted | Steam only offered approval on an existing device | Approve the sign-in on the device that holds the authenticator. |
 | The sign-in reports that the credentials are incorrect | The account name or password was mistyped | Check the credentials and start the sign-in again. |
-| The authenticator cannot be enrolled | Steam rejected the activation code, the SMS code was not accepted, or the account has no phone number | Confirm that the account has a phone number, request a new SMS code, and repeat the activation. |
+| The authenticator cannot be enrolled | Steam reports status 2 when the account has no phone number, and status 29 when an authenticator is already attached | Add a phone number to the account, or remove the existing authenticator with its revocation code, then enrol again. |
+| The activation reports that the SMS code was rejected | Steam answered with status 89, so the code does not match or has expired | Request a new code and enter it promptly. |
+| The activation reports that the code does not match the expected window | Steam answered with status 88, which means that the local clock differs from the Steam clock | Synchronise the operating system clock and activate the authenticator again. |
 | The credential store is reported as unavailable | The desktop session has no reachable Secret Service or Keychain | Unlock the session credential store or use a supported desktop session. |
 | The account list is empty after moving the data directory from another machine | The encrypted files are bound to the machine and user identifiers, so they cannot be decrypted elsewhere | Remove the `.unreadable` sibling files and add the accounts again. |
 | Saving an account, a secret, or a preference reports that it could not be written | The data directory is read-only, on a full disk, or otherwise protected | Restore write access to the data directory and repeat the action. |

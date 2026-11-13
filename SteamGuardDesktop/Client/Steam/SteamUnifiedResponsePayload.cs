@@ -132,5 +132,17 @@ namespace SteamGuardDesktop.Client.Steam
         /// </summary>
         [JsonPropertyName("authenticator_allowed")]
         public bool? IsAuthenticatorAllowed { get; set; }
+
+        /// <summary>
+        /// Gets or sets the protocol status reported for an authenticator operation.
+        /// </summary>
+        [JsonPropertyName("status")]
+        public int? Status { get; set; }
+
+        /// <summary>
+        /// Gets or sets the masked phone number that Steam associates with the authenticator.
+        /// </summary>
+        [JsonPropertyName("phone_number_hint")]
+        public string? PhoneNumberHint { get; set; }
     }
 }

@@ -63,6 +63,9 @@ namespace SteamGuardDesktop.Views
             => ViewModel?.Recovery.CompleteSignIn();
 
         private void OnCheckAuthenticatorStatusClick(object? sender, RoutedEventArgs arguments)
+            => ViewModel?.Recovery.RefreshAuthenticatorStatus();
+
+        private void OnStartLostDeviceRecoveryClick(object? sender, RoutedEventArgs arguments)
             => ViewModel?.Recovery.StartLostDeviceRecovery();
 
         private void OnRemoveAuthenticatorClick(object? sender, RoutedEventArgs arguments)

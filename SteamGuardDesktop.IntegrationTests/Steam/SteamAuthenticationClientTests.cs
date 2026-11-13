@@ -159,7 +159,9 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
 
             Assert.That(result.IsSuccessful);
             Assert.That(handler.Requests[0].RequestUri?.AbsolutePath, Is.EqualTo("/ITwoFactorService/RemoveAuthenticator/v1"));
-            Assert.That(handler.Requests[0].Headers.Authorization?.Parameter, Is.EqualTo("access-token-value"));
+            Assert.That(
+                handler.Requests[0].RequestUri?.Query,
+                Does.Contain("access_token=access-token-value"));
         }
 
         [Test]
@@ -199,6 +201,66 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
                 "android:76561198028572203");
 
             Assert.That(result.IsSuccessful, Is.False);
+        }
+
+        [Test]
+        public void GivenAnAccountWithoutAPhoneNumber_WhenAddingAnAuthenticator_ThenThePhoneIsReportedAsTheCause()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"response\":{\"status\":2}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            SteamClientResult<EnrolledAuthenticator> result = client.AddAuthenticator(
+                "access-token-value",
+                "76561198028572203",
+                "android:76561198028572203");
+
+            Assert.That(result.FailureReason, Does.Contain("phone number"));
+        }
+
+        [Test]
+        public void GivenAnAccountThatAlreadyHasAnAuthenticator_WhenAddingAnother_ThenTheExistingOneIsReported()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"response\":{\"status\":29}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            SteamClientResult<EnrolledAuthenticator> result = client.AddAuthenticator(
+                "access-token-value",
+                "76561198028572203",
+                "android:76561198028572203");
+
+            Assert.That(result.IsSuccessful, Is.False);
+            Assert.That(result.FailureReason, Does.Contain("already attached"));
+        }
+
+        [Test]
+        public void GivenAnEnrolmentRequest_WhenItIsSent_ThenTheTwoFactorServiceIsCalledWithTheAccessToken()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse(
+                    "{\"response\":{\"shared_secret\":\"c2hhcmVkLXNlY3JldA==\"," +
+                    "\"identity_secret\":\"aWRlbnRpdHktc2VjcmV0\",\"status\":1}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            client.AddAuthenticator(
+                "access-token-value",
+                "76561198028572203",
+                "android:76561198028572203");
+
+            Assert.That(
+                handler.Requests[0].RequestUri?.AbsolutePath,
+                Is.EqualTo("/ITwoFactorService/AddAuthenticator/v1"));
+            Assert.That(
+                handler.Requests[0].RequestUri?.Query,
+                Does.Contain("access_token=access-token-value"));
+            Assert.That(handler.Requests[0].Headers.Authorization, Is.Null);
         }
 
         [Test]
@@ -360,7 +422,9 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
             Assert.That(
                 handler.Requests[0].RequestUri?.AbsolutePath,
                 Is.EqualTo("/ITwoFactorService/RemoveAuthenticatorViaChallengeStart/v1"));
-            Assert.That(handler.Requests[0].Headers.Authorization?.Parameter, Is.EqualTo("access-token-value"));
+            Assert.That(
+                handler.Requests[0].RequestUri?.Query,
+                Does.Contain("access_token=access-token-value"));
         }
 
         [Test]
@@ -391,6 +455,22 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
 
             Assert.That(redactor.SanitisedAddresses, Is.Not.Empty);
             Assert.That(redactor.SanitisedAddresses, Has.None.Contains("input_json"));
+        }
+
+        [Test]
+        public void GivenAnAnonymousRequest_WhenSendingIt_ThenNoAccessTokenIsAdded()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse(KeyPayload)
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            client.GetPasswordRsaKey("DummyUser");
+
+            Assert.That(
+                System.Net.WebUtility.UrlDecode(handler.Requests[0].RequestUri?.Query ?? string.Empty),
+                Does.Not.Contain("access_token"));
         }
 
         private static SteamAuthenticationClient BuildClient(RecordingHttpMessageHandler handler)

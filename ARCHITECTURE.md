@@ -234,7 +234,7 @@ flowchart LR
 | `/mobileconf/ajaxop` | Outbound | HTTPS GET with signed parameters plus `op`, `cid`, and `ck` | Valve | `needsauth` produces a re-authentication result; other failures produce a safe reason |
 | `/mobileconf/details/{id}` | Outbound | HTTPS GET with signed parameters using the `details` tag | Valve | A rejected request produces a safe reason; the HTML fragment is reduced to plain text |
 | `/IAuthenticationService/*` | Outbound | HTTPS GET and POST carrying a protobuf-JSON `input_json` payload | Valve | Credential failures return the message reported by Steam; transport failures produce a safe reason |
-| `/ITwoFactorService/*` | Outbound | HTTPS POST carrying a protobuf-JSON `input_json` payload, authorised with a bearer access token | Valve | Rejected authenticator operations produce a safe reason; an activation attempt reports whether Steam accepted it or expects another attempt with a newer activation code; the recovery challenge is started before the code is submitted |
+| `/ITwoFactorService/*` | Outbound | HTTPS POST carrying a protobuf-JSON `input_json` payload whose request carries the session token as the `access_token` query parameter | Valve | Rejected authenticator operations produce a safe reason; the reported status distinguishes a missing phone number from an authenticator that is already attached, and a bad SMS code from a code that does not match the expected time window; the recovery challenge is started before the code is submitted |
 | `INativeSecretBackend` | Local | Availability probe, then credential read, write, and delete by entry name | Application and operating system | A store that cannot be reached is reported as unavailable, and the encrypted fallback keeps the secret |
 
 ## 🔀 Key Processes
@@ -266,7 +266,7 @@ sequenceDiagram
     Client->>Steam: PollAuthSessionStatus
     Steam-->>Client: Access token and refresh token
     ViewModel->>Management: AddAuthenticator or RecoverAuthenticator
-    Management->>Client: Two-factor request with the bearer token
+    Management->>Client: Two-factor request with the session token in the query string
     Steam-->>Client: Authenticator secrets
     ViewModel->>Management: CreateSecrets
 ```
@@ -274,6 +274,8 @@ sequenceDiagram
 The password is encrypted with the RSA public key that Steam publishes, is used only for the exchange, and is cleared from the form as soon as the sign-in starts. The guard type is selected from the guards that Steam reports, so a code sent to the e-mail address and a code from an existing authenticator are both supported, while a challenge that only accepts an in-app approval reports that a code cannot be used. The access token is stored only when the account is already configured, because the token belongs to an account entry; an account that is signed in but not yet saved is told to enrol or recover an authenticator, which saves the account and then stores the token. A successful enrolment or recovery raises an event that refreshes the account list, and the sign-out action revokes the session through Steam and clears the form. Recovery of a device that is no longer available is issued through the challenge endpoints rather than the revocation code, and the issued authenticator is stored with the same secret store that a manual account setup uses.
 
 An enrolment is finalised in repeated attempts, because the activation code derived from the shared secret is only accepted for a short window. The management service generates a fresh activation code for each attempt and submits it together with the SMS code that Steam sent to the registered phone number, and the attempt is repeated while Steam reports that it wants another one. The conversion of the shared secret to Base32 happens in the client, so the generator that validates and consumes it never receives a Base64 value. Before the first attempt the service compares the local clock with the Steam clock and refuses the activation when the two disagree by more than the accepted window, because the derived code would otherwise belong to the wrong window. The revocation code that Steam issues is surfaced as soon as the authenticator is issued, and it is stored with the secrets once the activation succeeds.
+
+The two-factor endpoints authenticate with the session token as the `access_token` query parameter, which is the form the Steam WebAPI accepts; an `Authorization` header is ignored by them and yields a generic anonymous rejection. The status that Steam reports is translated into a specific reason rather than a generic failure, so a refusal caused by a missing phone number, an authenticator that is already attached, a rejected SMS code, or a code that does not match the expected window is reported for what it is.
 
 Recovering an authenticator whose device is no longer available starts the revocation challenge before the code is requested, so that Steam has actually issued the code that the continuation submits. The continuation then returns the replacement authenticator, which is stored with the same secret store that a manual account setup uses.
 

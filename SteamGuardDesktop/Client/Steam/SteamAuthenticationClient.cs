@@ -54,6 +54,14 @@ namespace SteamGuardDesktop.Client.Steam
 
         private static int SuccessfulAuthenticatorStatus => 1;
 
+        private static int AuthenticatorStatusWithoutPhoneNumber => 2;
+
+        private static int AuthenticatorStatusAlreadyPresent => 29;
+
+        private static int FinalizationStatusCodeMismatch => 88;
+
+        private static int FinalizationStatusBadSmsCode => 89;
+
         private readonly HttpClient httpClient;
 
         private readonly ISteamResponseParser responseParser;
@@ -335,7 +343,7 @@ namespace SteamGuardDesktop.Client.Steam
                 ("authenticator_type", "1"),
                 ("device_identifier", deviceIdentifier),
                 ("sms_phone_id", "1"),
-                ("version", "1"));
+                ("version", "2"));
 
             SteamClientResult<SteamUnifiedResponsePayload> result = SendRequest(
                 "POST",
@@ -350,6 +358,20 @@ namespace SteamGuardDesktop.Client.Steam
             }
 
             SteamUnifiedResponsePayload responsePayload = result.Value;
+
+            if (responsePayload.Status == AuthenticatorStatusWithoutPhoneNumber)
+            {
+                return SteamClientResult<EnrolledAuthenticator>.Failed(
+                    "Steam refused the enrolment because the account has no phone number. " +
+                    "Add a phone number to the account before enrolling an authenticator.");
+            }
+
+            if (responsePayload.Status == AuthenticatorStatusAlreadyPresent)
+            {
+                return SteamClientResult<EnrolledAuthenticator>.Failed(
+                    "Steam reports that an authenticator is already attached to the account. " +
+                    "Remove it with its revocation code before enrolling another one.");
+            }
 
             if (responsePayload.SharedSecret is null || responsePayload.IdentitySecret is null)
             {
@@ -408,6 +430,19 @@ namespace SteamGuardDesktop.Client.Steam
             {
                 return SteamClientResult<AuthenticatorFinalizationState>.Successful(
                     AuthenticatorFinalizationState.Succeeded);
+            }
+
+            if (result.Value.Status == FinalizationStatusBadSmsCode)
+            {
+                return SteamClientResult<AuthenticatorFinalizationState>.Failed(
+                    "Steam rejected the SMS code.");
+            }
+
+            if (result.Value.Status == FinalizationStatusCodeMismatch)
+            {
+                return SteamClientResult<AuthenticatorFinalizationState>.Failed(
+                    "Steam could not match the activation code, which usually means that the local clock " +
+                    "differs from the Steam clock. Synchronise the clock and try again.");
             }
 
             if (result.Value.WantsMore == true)
@@ -548,6 +583,7 @@ namespace SteamGuardDesktop.Client.Steam
 
         private static long ComposeUnixTime() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
+
         private static string DescribeStatus(HttpStatusCode statusCode)
             => $"Steam returned the status code {(int)statusCode}.";
 
@@ -571,8 +607,17 @@ namespace SteamGuardDesktop.Client.Steam
             return LoginGuardType.Unsupported;
         }
 
-        private string ComposeRequestAddress(string service, string method)
-            => CombineAddress(settings.SteamApiBaseAddress, $"{service}/{method}/v1");
+        private string ComposeRequestAddress(string service, string method, string accessToken)
+        {
+            string requestAddress = CombineAddress(settings.SteamApiBaseAddress, $"{service}/{method}/v1");
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return requestAddress;
+            }
+
+            return requestAddress + "?access_token=" + WebUtility.UrlEncode(accessToken);
+        }
 
         private static string CombineAddress(string baseAddress, string relativePath)
             => new Uri(new Uri(baseAddress, UriKind.Absolute), relativePath).AbsoluteUri;
@@ -584,7 +629,7 @@ namespace SteamGuardDesktop.Client.Steam
             string payload,
             string accessToken)
         {
-            string requestAddress = ComposeRequestAddress(service, method);
+            string requestAddress = ComposeRequestAddress(service, method, accessToken);
             string encodedPayload = WebUtility.UrlEncode(payload);
 
             using HttpRequestMessage request = new(new HttpMethod(httpMethod), requestAddress);
@@ -599,11 +644,6 @@ namespace SteamGuardDesktop.Client.Steam
                 [
                     new KeyValuePair<string, string>("input_json", payload)
                 ]);
-            }
-
-            if (!string.IsNullOrWhiteSpace(accessToken))
-            {
-                request.Headers.Add("Authorization", "Bearer " + accessToken);
             }
 
             logger.Debug(

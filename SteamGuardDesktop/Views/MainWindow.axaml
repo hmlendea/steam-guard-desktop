@@ -227,6 +227,11 @@
 
           <TextBlock Text="Authenticator"
                      IsVisible="{Binding Recovery.IsGuardSubmitted}" />
+          <TextBlock Text="The number of removal attempts that remain is shown by the status check."
+                     FontSize="{DynamicResource StatusFontSize}"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}"
+                     IsVisible="{Binding Recovery.IsGuardSubmitted}"
+                     TextWrapping="Wrap" />
           <TextBlock Text="{Binding Recovery.IssuedRevocationCode}"
                      AutomationProperties.Name="Issued revocation code"
                      IsVisible="{Binding Recovery.HasIssuedRevocationCode}"
@@ -240,6 +245,9 @@
                       IsVisible="{Binding Recovery.IsGuardSubmitted}">
             <Button Content="Check status"
                     Click="OnCheckAuthenticatorStatusClick" />
+            <Button Content="Start recovery"
+                    IsVisible="{Binding Recovery.IsGuardSubmitted}"
+                    Click="OnStartLostDeviceRecoveryClick" />
             <Button Content="Remove authenticator"
                     Click="OnRemoveAuthenticatorClick" />
             <Button Content="Enrol authenticator"

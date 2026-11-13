@@ -56,7 +56,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - Signs in to Steam with an account name and password, exchanging the password over an RSA-encrypted request without persisting it.
 - Accepts the guard that Steam requests, whether it is a code sent to the e-mail address or a code from an existing authenticator.
 - Stores the access token that a sign-in issues once the account is saved, and revokes the session on sign-out.
-- Enrols a Steam Mobile Authenticator and finalises the enrolment with the code that Steam issues.
+- Enrols a Steam Mobile Authenticator, releases the activation attempt against the code that Steam sends to the registered phone number, and saves the account once Steam confirms the enrolment.
 - Removes an existing authenticator with its revocation code.
 - Recovers access when the device that held Steam Guard is no longer available.
 - Presents the same interface on Windows, macOS, and Linux, and does not adopt host styling.
@@ -72,7 +72,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
 
 Add an account with its Steam ID 64, shared secret, identity secret, and Steam access token, then select it in the account list. The authenticator panel displays the current code and its countdown; copying the code places it on the clipboard. Refreshing the confirmation list retrieves the pending confirmations, and the approve and deny actions apply a decision to the selected confirmation after an explicit user action.
 
-An account can also be provisioned by signing in with its account name and password. The sign-in accepts the guard that Steam requests, and the resulting session can enrol a new authenticator, remove an existing one with its revocation code, or recover access when the device that held Steam Guard is no longer available. Signing out revokes the session through Steam and clears the form. The password is used only for the encrypted exchange and is never stored.
+An account can also be provisioned by signing in with its account name and password. The sign-in accepts the guard that Steam requests, and the resulting session can enrol a new authenticator, remove an existing one with its revocation code, or recover access when the device that held Steam Guard is no longer available. Enrolling a new authenticator requires a phone number on the account: Steam sends a code to it, and the enrolment is finalised with that code together with the code derived from the issued shared secret, which is regenerated for each attempt while Steam keeps asking for another one. Signing out revokes the session through Steam and clears the form. The password is used only for the encrypted exchange and is never stored.
 
 ```bash
 dotnet run --project SteamGuardDesktop
@@ -86,6 +86,8 @@ dotnet run --project SteamGuardDesktop
 - The encrypted files cannot be read on another machine or after a user rename. An unreadable file is moved to a `.unreadable` sibling at startup so that the application still starts with empty state, and it must be removed before its secrets can be used again.
 - When the data directory cannot be written, saving an account, a secret, or a preference reports the failure instead of crashing; the in-memory state is rolled back so that it never disagrees with what is on disk.
 - Steam protocol behaviour is validated against the current endpoints only; an endpoint change requires a client update.
+- Enrolling a mobile authenticator requires a phone number on the Steam account, because Steam sends the activation code to that number; an account without one cannot complete enrolment.
+- Steam Guard codes are computed from the Base32 form of the shared secret, and the byte form that Steam returns during enrolment and recovery is converted to it at the protocol boundary.
 - Recovery of an authenticator on a device that is no longer available depends on the codes that Steam sends to the registered e-mail address, phone number, or authenticator.
 
 ## 🖥️ System Requirements
@@ -304,7 +306,7 @@ See [ROADMAP.md](./ROADMAP.md) for planned work and forthcoming changes.
 | Confirmations cannot be loaded | The Steam access token is missing or expired | Sign in again to obtain a current access token. |
 | The sign-in observes that a code is not accepted | Steam only offered approval on an existing device | Approve the sign-in on the device that holds the authenticator. |
 | The sign-in reports that the credentials are incorrect | The account name or password was mistyped | Check the credentials and start the sign-in again. |
-| The authenticator cannot be enrolled | Steam rejected the activation code or the SMS code was not accepted | Request a new code and complete the enrolment again. |
+| The authenticator cannot be enrolled | Steam rejected the activation code, the SMS code was not accepted, or the account has no phone number | Confirm that the account has a phone number, request a new SMS code, and repeat the activation. |
 | The credential store is reported as unavailable | The desktop session has no reachable Secret Service or Keychain | Unlock the session credential store or use a supported desktop session. |
 | The account list is empty after moving the data directory from another machine | The encrypted files are bound to the machine and user identifiers, so they cannot be decrypted elsewhere | Remove the `.unreadable` sibling files and add the accounts again. |
 | Saving an account, a secret, or a preference reports that it could not be written | The data directory is read-only, on a full disk, or otherwise protected | Restore write access to the data directory and repeat the action. |

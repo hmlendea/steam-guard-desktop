@@ -81,14 +81,16 @@ namespace SteamGuardDesktop.Client.Steam
         /// </summary>
         /// <param name="accessToken">The access token of the authenticated session.</param>
         /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>
-        /// <param name="activationCode">The activation code issued by Steam.</param>
+        /// <param name="activationCode">The activation code derived from the shared secret.</param>
         /// <param name="deviceIdentifier">The device identifier to report.</param>
-        /// <returns>The outcome of the finalisation.</returns>
-        SteamClientResult<bool> FinalizeAuthenticator(
+        /// <param name="smsActivationCode">The code that Steam sent to the registered phone number.</param>
+        /// <returns>The state that Steam reported for the attempt.</returns>
+        SteamClientResult<AuthenticatorFinalizationState> FinalizeAuthenticator(
             string accessToken,
             string steamIdentifier,
             string activationCode,
-            string deviceIdentifier);
+            string deviceIdentifier,
+            string smsActivationCode);
 
         /// <summary>
         /// Starts the revocation of an authenticator whose device is no longer available.

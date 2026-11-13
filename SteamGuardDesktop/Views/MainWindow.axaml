@@ -234,11 +234,12 @@
             <Button Content="Enrol authenticator"
                     Click="OnEnrolAuthenticatorClick" />
             <Button Content="Activate authenticator"
+                    IsVisible="{Binding Recovery.HasPendingActivation}"
                     Click="OnFinalizeAuthenticatorClick" />
           </StackPanel>
 
           <TextBox Watermark="SMS code"
-                   IsVisible="{Binding Recovery.IsRecoveringLostDevice}"
+                   IsVisible="{Binding Recovery.IsSmsCodeRequired}"
                    Text="{Binding Recovery.SmsCode}" />
           <Button Content="Recover lost device"
                   IsVisible="{Binding Recovery.IsRecoveringLostDevice}"

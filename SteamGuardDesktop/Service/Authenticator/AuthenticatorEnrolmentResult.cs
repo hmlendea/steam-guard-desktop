@@ -18,11 +18,6 @@ namespace SteamGuardDesktop.Service.Authenticator
         public EnrolledAuthenticator? Authenticator { get; set; }
 
         /// <summary>
-        /// Gets or sets the activation code required by the finalisation step.
-        /// </summary>
-        public string ActivationCode { get; set; } = string.Empty;
-
-        /// <summary>
         /// Gets or sets the safe description of the failure.
         /// </summary>
         public string FailureReason { get; set; } = string.Empty;
@@ -31,15 +26,11 @@ namespace SteamGuardDesktop.Service.Authenticator
         /// Creates a successful result.
         /// </summary>
         /// <param name="authenticator">The authenticator issued by Steam.</param>
-        /// <param name="activationCode">The activation code required by the finalisation step.</param>
         /// <returns>A successful result.</returns>
-        public static AuthenticatorEnrolmentResult Successful(
-            EnrolledAuthenticator authenticator,
-            string activationCode) => new()
+        public static AuthenticatorEnrolmentResult Successful(EnrolledAuthenticator authenticator) => new()
         {
             IsSuccessful = true,
-            Authenticator = authenticator,
-            ActivationCode = activationCode
+            Authenticator = authenticator
         };
 
         /// <summary>

@@ -37,18 +37,18 @@ namespace SteamGuardDesktop.Service.Authenticator
         AuthenticatorEnrolmentResult AddAuthenticator(string steamIdentifier, string accessToken);
 
         /// <summary>
-        /// Completes an enrolment with the activation code issued by Steam.
+        /// Completes an enrolment with the activation code derived from the shared secret.
         /// </summary>
         /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>
         /// <param name="accessToken">The access token of the authenticated session.</param>
-        /// <param name="activationCode">The activation code issued by Steam.</param>
-        /// <param name="deviceIdentifier">The device identifier of the enrolled authenticator.</param>
+        /// <param name="enrolledAuthenticator">The authenticator issued by Steam.</param>
+        /// <param name="smsActivationCode">The code that Steam sent to the registered phone number.</param>
         /// <returns>The outcome of the operation.</returns>
         AuthenticatorOperationResult FinalizeAuthenticator(
             string steamIdentifier,
             string accessToken,
-            string activationCode,
-            string deviceIdentifier);
+            EnrolledAuthenticator enrolledAuthenticator,
+            string smsActivationCode);
 
         /// <summary>
         /// Recovers an account whose authenticator device is no longer available.
@@ -75,12 +75,5 @@ namespace SteamGuardDesktop.Service.Authenticator
         /// <param name="enrolledAuthenticator">The authenticator issued by Steam.</param>
         /// <returns>The secrets to store for the account.</returns>
         AuthenticatorSecrets CreateSecrets(EnrolledAuthenticator enrolledAuthenticator);
-
-        /// <summary>
-        /// Creates an activation code from a shared secret for the current moment.
-        /// </summary>
-        /// <param name="enrolledAuthenticator">The authenticator issued by Steam.</param>
-        /// <returns>The activation code, or <c>null</c> when the shared secret cannot be used.</returns>
-        string? GenerateActivationCode(EnrolledAuthenticator enrolledAuthenticator);
     }
 }

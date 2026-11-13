@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 using NuciLog.Core;
 
@@ -18,6 +19,10 @@ namespace SteamGuardDesktop.Service.Authenticator
         IOtpCodeGenerator otpCodeGenerator,
         ILogger logger) : IAuthenticatorManagementService
     {
+        private static int MaximumFinalizationAttempts => 30;
+
+        private static TimeSpan FinalizationRetryDelay => TimeSpan.FromSeconds(5);
+
         /// <inheritdoc />
         public AuthenticatorStatusResult GetStatus(string steamIdentifier, string accessToken)
         {
@@ -85,42 +90,60 @@ namespace SteamGuardDesktop.Service.Authenticator
                 return AuthenticatorEnrolmentResult.Failed(result.FailureReason);
             }
 
-            string? activationCode = GenerateActivationCode(result.Value);
+            logger.Info(
+                SteamGuardOperation.AddAuthenticator,
+                OperationStatus.Started,
+                new LogInfo(SteamGuardInfoKey.AccountIdentifier, steamIdentifier));
 
-            if (activationCode is null)
-            {
-                return AuthenticatorEnrolmentResult.Failed("The authenticator shared secret could not be used.");
-            }
-
-            return AuthenticatorEnrolmentResult.Successful(result.Value, activationCode);
+            return AuthenticatorEnrolmentResult.Successful(result.Value);
         }
 
         /// <inheritdoc />
         public AuthenticatorOperationResult FinalizeAuthenticator(
             string steamIdentifier,
             string accessToken,
-            string activationCode,
-            string deviceIdentifier)
+            EnrolledAuthenticator enrolledAuthenticator,
+            string smsActivationCode)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(activationCode, nameof(activationCode));
+            ArgumentNullException.ThrowIfNull(enrolledAuthenticator, nameof(enrolledAuthenticator));
+            ArgumentException.ThrowIfNullOrWhiteSpace(smsActivationCode, nameof(smsActivationCode));
 
-            SteamClientResult<bool> result = authenticationClient.FinalizeAuthenticator(
-                accessToken,
-                steamIdentifier,
-                activationCode,
-                deviceIdentifier);
-
-            if (!result.IsSuccessful)
+            for (int attempt = 0; attempt < MaximumFinalizationAttempts; ++attempt)
             {
-                return AuthenticatorOperationResult.Failed(result.FailureReason);
+                string? activationCode = GenerateActivationCode(enrolledAuthenticator);
+
+                if (activationCode is null)
+                {
+                    return AuthenticatorOperationResult.Failed(
+                        "The authenticator activation code could not be generated.");
+                }
+
+                SteamClientResult<AuthenticatorFinalizationState> result = authenticationClient.FinalizeAuthenticator(
+                    accessToken,
+                    steamIdentifier,
+                    activationCode,
+                    enrolledAuthenticator.DeviceIdentifier,
+                    smsActivationCode);
+
+                if (!result.IsSuccessful || result.Value is AuthenticatorFinalizationState.Unknown)
+                {
+                    return AuthenticatorOperationResult.Failed(result.FailureReason);
+                }
+
+                if (result.Value is AuthenticatorFinalizationState.Succeeded)
+                {
+                    logger.Info(
+                        SteamGuardOperation.AddAuthenticator,
+                        OperationStatus.Success,
+                        new LogInfo(SteamGuardInfoKey.AccountIdentifier, steamIdentifier));
+
+                    return AuthenticatorOperationResult.Successful();
+                }
+
+                Thread.Sleep(FinalizationRetryDelay);
             }
 
-            logger.Info(
-                SteamGuardOperation.AddAuthenticator,
-                OperationStatus.Success,
-                new LogInfo(SteamGuardInfoKey.AccountIdentifier, steamIdentifier));
-
-            return AuthenticatorOperationResult.Successful();
+            return AuthenticatorOperationResult.Failed("Steam did not activate the authenticator in time.");
         }
 
         /// <inheritdoc />
@@ -141,7 +164,7 @@ namespace SteamGuardDesktop.Service.Authenticator
                 return AuthenticatorEnrolmentResult.Failed(result.FailureReason);
             }
 
-            return AuthenticatorEnrolmentResult.Successful(result.Value, string.Empty);
+            return AuthenticatorEnrolmentResult.Successful(result.Value);
         }
 
         /// <inheritdoc />
@@ -174,12 +197,7 @@ namespace SteamGuardDesktop.Service.Authenticator
             };
         }
 
-        /// <inheritdoc />
-        public string? GenerateActivationCode(EnrolledAuthenticator enrolledAuthenticator)
-        {
-            ArgumentNullException.ThrowIfNull(enrolledAuthenticator, nameof(enrolledAuthenticator));
-
-            return otpCodeGenerator.GenerateCode(enrolledAuthenticator.SharedSecret)?.Value;
-        }
+        private string? GenerateActivationCode(EnrolledAuthenticator enrolledAuthenticator)
+            => otpCodeGenerator.GenerateCode(enrolledAuthenticator.SharedSecret)?.Value;
     }
 }

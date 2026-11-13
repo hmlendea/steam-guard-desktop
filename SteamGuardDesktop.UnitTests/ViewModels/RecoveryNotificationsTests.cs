@@ -83,8 +83,8 @@ namespace SteamGuardDesktop.UnitTests.Presentation
             public AuthenticatorOperationResult FinalizeAuthenticator(
                 string steamIdentifier,
                 string accessToken,
-                string activationCode,
-                string deviceIdentifier) => AuthenticatorOperationResult.Successful();
+                EnrolledAuthenticator enrolledAuthenticator,
+                string smsActivationCode) => AuthenticatorOperationResult.Successful();
 
             public AuthenticatorEnrolmentResult RecoverAuthenticator(
                 string steamIdentifier,
@@ -96,8 +96,6 @@ namespace SteamGuardDesktop.UnitTests.Presentation
 
             public SteamGuardDesktop.Domain.Authenticator.AuthenticatorSecrets CreateSecrets(
                 EnrolledAuthenticator enrolledAuthenticator) => new();
-
-            public string? GenerateActivationCode(EnrolledAuthenticator enrolledAuthenticator) => null;
         }
 
         private sealed class StubAccountService : IAccountService

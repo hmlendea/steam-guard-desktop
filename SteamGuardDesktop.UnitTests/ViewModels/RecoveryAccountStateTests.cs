@@ -192,13 +192,13 @@ namespace SteamGuardDesktop.UnitTests.Presentation
             public AuthenticatorEnrolmentResult AddAuthenticator(string steamIdentifier, string accessToken) =>
                 AuthenticatorToReturn is null
                     ? AuthenticatorEnrolmentResult.Failed("Steam did not issue an authenticator.")
-                    : AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn, "ABC12");
+                    : AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn);
 
             public AuthenticatorOperationResult FinalizeAuthenticator(
                 string steamIdentifier,
                 string accessToken,
-                string activationCode,
-                string deviceIdentifier) => AuthenticatorOperationResult.Successful();
+                EnrolledAuthenticator enrolledAuthenticator,
+                string smsActivationCode) => AuthenticatorOperationResult.Successful();
 
             public AuthenticatorEnrolmentResult RecoverAuthenticator(
                 string steamIdentifier,
@@ -206,7 +206,7 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 string smsCode) =>
                 AuthenticatorToReturn is null
                     ? AuthenticatorEnrolmentResult.Failed("Steam rejected the recovery code.")
-                    : AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn, string.Empty);
+                    : AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn);
 
             public AuthenticatorOperationResult RemoveAllGuardCookies(string accessToken)
             {
@@ -222,8 +222,6 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                     IdentitySecret = enrolledAuthenticator.IdentitySecret,
                     RevocationCode = enrolledAuthenticator.RevocationCode
                 };
-
-            public string? GenerateActivationCode(EnrolledAuthenticator enrolledAuthenticator) => "ABC12";
         }
 
         private sealed class StubAccountService : IAccountService

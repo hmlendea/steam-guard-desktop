@@ -179,7 +179,8 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
                 "android:76561198028572203");
 
             Assert.That(result.IsSuccessful);
-            Assert.That(result.Value?.SharedSecret, Is.EqualTo("c2hhcmVkLXNlY3JldA=="));
+            Assert.That(result.Value?.SharedSecret, Is.EqualTo("ONUGC4TFMQWXGZLDOJSXI"));
+            Assert.That(result.Value?.IdentitySecret, Is.EqualTo("aWRlbnRpdHktc2VjcmV0"));
             Assert.That(result.Value?.RevocationCode, Is.EqualTo("R61387"));
         }
 
@@ -218,7 +219,7 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
                 "76561198028572203");
 
             Assert.That(result.IsSuccessful);
-            Assert.That(result.Value?.SharedSecret, Is.EqualTo("c2hhcmVkLXNlY3JldA=="));
+            Assert.That(result.Value?.SharedSecret, Is.EqualTo("ONUGC4TFMQWXGZLDOJSXI"));
             Assert.That(handler.Requests[0].RequestUri?.AbsolutePath, Is.EqualTo("/ITwoFactorService/RemoveAuthenticatorViaChallengeContinue/v1"));
         }
 
@@ -235,6 +236,71 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
                 "access-token-value",
                 "SMS01",
                 "76561198028572203");
+
+            Assert.That(result.IsSuccessful, Is.False);
+        }
+
+        [Test]
+        public void GivenAnActivationAttempt_WhenSteamAcceptsIt_ThenTheSmsCodeIsSubmittedAndSuccessIsReported()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"response\":{\"success\":true}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            SteamClientResult<AuthenticatorFinalizationState> result = client.FinalizeAuthenticator(
+                "access-token-value",
+                "76561198028572203",
+                "ABC12",
+                "android:76561198028572203",
+                "SMS01");
+
+            Assert.That(result.IsSuccessful);
+            Assert.That(result.Value, Is.EqualTo(AuthenticatorFinalizationState.Succeeded));
+
+            string decodedBody = System.Net.WebUtility.UrlDecode(handler.RequestBodies[0]);
+
+            Assert.That(decodedBody, Does.Contain("\"activation_code\":\"SMS01\""));
+            Assert.That(decodedBody, Does.Contain("\"validate_sms_code\":\"1\""));
+            Assert.That(decodedBody, Does.Contain("\"authenticator_code\":\"ABC12\""));
+        }
+
+        [Test]
+        public void GivenAnActivationAttempt_WhenSteamWantsAnotherAttempt_ThenMoreIsReported()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"response\":{\"success\":false,\"want_more\":true}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            SteamClientResult<AuthenticatorFinalizationState> result = client.FinalizeAuthenticator(
+                "access-token-value",
+                "76561198028572203",
+                "ABC12",
+                "android:76561198028572203",
+                "SMS01");
+
+            Assert.That(result.IsSuccessful);
+            Assert.That(result.Value, Is.EqualTo(AuthenticatorFinalizationState.WantsMore));
+        }
+
+        [Test]
+        public void GivenAnActivationAttempt_WhenSteamRejectsIt_ThenTheRequestFails()
+        {
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"response\":{\"success\":false}}")
+            ]);
+
+            SteamAuthenticationClient client = BuildClient(handler);
+            SteamClientResult<AuthenticatorFinalizationState> result = client.FinalizeAuthenticator(
+                "access-token-value",
+                "76561198028572203",
+                "ABC12",
+                "android:76561198028572203",
+                "SMS01");
 
             Assert.That(result.IsSuccessful, Is.False);
         }

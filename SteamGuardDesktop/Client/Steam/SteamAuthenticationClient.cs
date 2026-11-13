@@ -54,8 +54,6 @@ namespace SteamGuardDesktop.Client.Steam
 
         private static int SuccessfulAuthenticatorStatus => 1;
 
-        private static int MaximumFinalizeAttempts => 30;
-
         private readonly HttpClient httpClient;
 
         private readonly ISteamResponseParser responseParser;
@@ -367,7 +365,7 @@ namespace SteamGuardDesktop.Client.Steam
             return SteamClientResult<EnrolledAuthenticator>.Successful(new EnrolledAuthenticator
             {
                 SteamIdentifier = steamIdentifier,
-                SharedSecret = Convert.ToBase64String(responsePayload.SharedSecret),
+                SharedSecret = SteamSharedSecretEncoder.Encode(responsePayload.SharedSecret),
                 IdentitySecret = Convert.ToBase64String(responsePayload.IdentitySecret),
                 RevocationCode = responsePayload.RevocationCode ?? string.Empty,
                 DeviceIdentifier = responsePayload.DeviceIdentifier ?? deviceIdentifier
@@ -375,49 +373,50 @@ namespace SteamGuardDesktop.Client.Steam
         }
 
         /// <inheritdoc />
-        public SteamClientResult<bool> FinalizeAuthenticator(
+        public SteamClientResult<AuthenticatorFinalizationState> FinalizeAuthenticator(
             string accessToken,
             string steamIdentifier,
             string activationCode,
-            string deviceIdentifier)
+            string deviceIdentifier,
+            string smsActivationCode)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(steamIdentifier, nameof(steamIdentifier));
+            ArgumentException.ThrowIfNullOrWhiteSpace(activationCode, nameof(activationCode));
+            ArgumentException.ThrowIfNullOrWhiteSpace(smsActivationCode, nameof(smsActivationCode));
 
-            for (int attempt = 0; attempt < MaximumFinalizeAttempts; ++attempt)
+            string payload = ComposeJson(
+                ("steamid", steamIdentifier),
+                ("authenticator_code", activationCode),
+                ("authenticator_time", ComposeUnixTime().ToString(CultureInfo.InvariantCulture)),
+                ("device_identifier", deviceIdentifier),
+                ("activation_code", smsActivationCode),
+                ("validate_sms_code", "1"));
+
+            SteamClientResult<SteamUnifiedResponsePayload> result = SendRequest(
+                "POST",
+                TwoFactorService,
+                FinalizeAuthenticatorMethod,
+                payload,
+                accessToken);
+
+            if (!result.IsSuccessful || result.Value is null)
             {
-                string payload = ComposeJson(
-                    ("steamid", steamIdentifier),
-                    ("authenticator_code", activationCode),
-                    ("authenticator_time", ComposeUnixTime().ToString(CultureInfo.InvariantCulture)),
-                    ("device_identifier", deviceIdentifier),
-                    ("validate_sms_code", "1"));
-
-                SteamClientResult<SteamUnifiedResponsePayload> result = SendRequest(
-                    "POST",
-                    TwoFactorService,
-                    FinalizeAuthenticatorMethod,
-                    payload,
-                    accessToken);
-
-                if (!result.IsSuccessful || result.Value is null)
-                {
-                    return SteamClientResult<bool>.Failed(result.FailureReason);
-                }
-
-                if (result.Value.IsSuccessful == true)
-                {
-                    return SteamClientResult<bool>.Successful(true);
-                }
-
-                if (result.Value.WantsMore != true)
-                {
-                    return SteamClientResult<bool>.Failed("Steam rejected the activation code.");
-                }
-
-                Thread.Sleep(TimeSpan.FromSeconds(5));
+                return SteamClientResult<AuthenticatorFinalizationState>.Failed(result.FailureReason);
             }
 
-            return SteamClientResult<bool>.Failed("Steam did not activate the authenticator in time.");
+            if (result.Value.IsSuccessful == true)
+            {
+                return SteamClientResult<AuthenticatorFinalizationState>.Successful(
+                    AuthenticatorFinalizationState.Succeeded);
+            }
+
+            if (result.Value.WantsMore == true)
+            {
+                return SteamClientResult<AuthenticatorFinalizationState>.Successful(
+                    AuthenticatorFinalizationState.WantsMore);
+            }
+
+            return SteamClientResult<AuthenticatorFinalizationState>.Failed("Steam rejected the activation code.");
         }
 
         /// <inheritdoc />
@@ -490,7 +489,7 @@ namespace SteamGuardDesktop.Client.Steam
             return SteamClientResult<EnrolledAuthenticator>.Successful(new EnrolledAuthenticator
             {
                 SteamIdentifier = steamIdentifier,
-                SharedSecret = Convert.ToBase64String(responsePayload.SharedSecret),
+                SharedSecret = SteamSharedSecretEncoder.Encode(responsePayload.SharedSecret),
                 IdentitySecret = Convert.ToBase64String(responsePayload.IdentitySecret),
                 RevocationCode = responsePayload.RevocationCode ?? string.Empty
             });

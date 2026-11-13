@@ -144,10 +144,50 @@ namespace SteamGuardDesktop.UnitTests.Presentation
             managementService.AuthenticatorToReturn = BuildEnrolledAuthenticator();
 
             viewModel.EnrolAuthenticator();
+            viewModel.SmsCode = "SMS01";
             viewModel.FinalizeAuthenticator();
 
             Assert.That(managementService.FinalizeWasCalled);
             Assert.That(accountService.SavedAccount?.SteamIdentifier, Is.EqualTo(ValidSteamIdentifier));
+        }
+
+        [Test]
+        public void GivenAPendingActivation_WhenNoSmsCodeIsSupplied_ThenActivationIsRejected()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+
+            managementService.AuthenticatorToReturn = BuildEnrolledAuthenticator();
+
+            viewModel.EnrolAuthenticator();
+            viewModel.FinalizeAuthenticator();
+
+            Assert.That(managementService.FinalizeWasCalled, Is.False);
+            Assert.That(viewModel.StatusMessage, Does.Contain("SMS code"));
+        }
+
+        [Test]
+        public void GivenAPendingActivation_WhenTheSmsCodeBecomesRequired_ThenTheChangeIsAnnounced()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+
+            managementService.AuthenticatorToReturn = BuildEnrolledAuthenticator();
+
+            List<string> changedProperties = [];
+            viewModel.PropertyChanged += (sender, arguments) =>
+            {
+                if (arguments.PropertyName is not null)
+                {
+                    changedProperties.Add(arguments.PropertyName);
+                }
+            };
+
+            viewModel.EnrolAuthenticator();
+
+            Assert.That(viewModel.HasPendingActivation);
+            Assert.That(viewModel.IsSmsCodeRequired);
+            Assert.That(changedProperties, Contains.Item("HasPendingActivation"));
         }
 
         [Test]
@@ -309,14 +349,14 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                     return AuthenticatorEnrolmentResult.Failed("Steam did not issue an authenticator.");
                 }
 
-                return AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn, "ABC12");
+                return AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn);
             }
 
             public AuthenticatorOperationResult FinalizeAuthenticator(
                 string steamIdentifier,
                 string accessToken,
-                string activationCode,
-                string deviceIdentifier)
+                EnrolledAuthenticator enrolledAuthenticator,
+                string smsActivationCode)
             {
                 FinalizeWasCalled = true;
 
@@ -335,7 +375,7 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                     return AuthenticatorEnrolmentResult.Failed("Steam rejected the recovery code.");
                 }
 
-                return AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn, string.Empty);
+                return AuthenticatorEnrolmentResult.Successful(AuthenticatorToReturn);
             }
 
             public AuthenticatorOperationResult RemoveAllGuardCookies(string accessToken) =>
@@ -347,8 +387,6 @@ namespace SteamGuardDesktop.UnitTests.Presentation
                 IdentitySecret = enrolledAuthenticator.IdentitySecret,
                 RevocationCode = enrolledAuthenticator.RevocationCode
             };
-
-            public string? GenerateActivationCode(EnrolledAuthenticator enrolledAuthenticator) => "ABC12";
         }
 
         private sealed class StubAccountService : IAccountService

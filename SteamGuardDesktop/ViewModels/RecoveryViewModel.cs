@@ -60,6 +60,9 @@ namespace SteamGuardDesktop.ViewModels
         private bool isRecoveringLostDevice;
 
         [ObservableProperty]
+        private bool hasPendingActivation;
+
+        [ObservableProperty]
         private int signOutRequestCount;
 
         [ObservableProperty]
@@ -94,6 +97,11 @@ namespace SteamGuardDesktop.ViewModels
         /// Gets a value indicating whether an account has been saved since the last change.
         /// </summary>
         public event EventHandler? AccountSaved;
+
+        /// <summary>
+        /// Gets a value indicating whether an SMS code must be supplied to finish the current step.
+        /// </summary>
+        public bool IsSmsCodeRequired => IsRecoveringLostDevice || HasPendingActivation;
 
         /// <summary>
         /// Starts the sign-in with the credentials entered in the form.
@@ -299,12 +307,12 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             enrolledAuthenticator = result.Authenticator;
-            GuardMessage = result.ActivationCode;
-            ReportStatus("Activate the authenticator with the displayed code and the SMS code.");
+            HasPendingActivation = true;
+            ReportStatus("Steam sent an SMS code to the registered phone number. Enter it and activate the authenticator.");
         }
 
         /// <summary>
-        /// Completes the enrolment with the activation code generated from the issued shared secret.
+        /// Completes the enrolment with the activation code derived from the issued shared secret and the SMS code.
         /// </summary>
         public void FinalizeAuthenticator()
         {
@@ -315,11 +323,9 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
-            string? activationCode = authenticatorManagementService.GenerateActivationCode(enrolledAuthenticator);
-
-            if (activationCode is null)
+            if (string.IsNullOrWhiteSpace(SmsCode))
             {
-                ReportStatus("The authenticator activation code could not be generated.");
+                ReportStatus("Enter the SMS code that Steam sent to the registered phone number.");
 
                 return;
             }
@@ -327,8 +333,10 @@ namespace SteamGuardDesktop.ViewModels
             AuthenticatorOperationResult result = authenticatorManagementService.FinalizeAuthenticator(
                 SteamIdentifier,
                 AccessToken,
-                activationCode,
-                enrolledAuthenticator.DeviceIdentifier);
+                enrolledAuthenticator,
+                SmsCode.Trim());
+
+            SmsCode = string.Empty;
 
             if (!result.IsSuccessful)
             {
@@ -353,6 +361,7 @@ namespace SteamGuardDesktop.ViewModels
             }
 
             enrolledAuthenticator = null;
+            HasPendingActivation = false;
             AccountSaved?.Invoke(this, EventArgs.Empty);
             ReportStatus("The authenticator was enrolled and the account was saved.");
         }
@@ -432,6 +441,7 @@ namespace SteamGuardDesktop.ViewModels
             IsGuardSubmitted = false;
             IsGuardCodeRequired = false;
             IsRecoveringLostDevice = false;
+            HasPendingActivation = false;
             SignOutRequestCount += 1;
             ClearStatus();
         }
@@ -455,6 +465,7 @@ namespace SteamGuardDesktop.ViewModels
             IsGuardSubmitted = false;
             IsGuardCodeRequired = false;
             IsRecoveringLostDevice = false;
+            HasPendingActivation = false;
         }
 
         private AccountAccessTokenResult SaveRecoveredAccessToken()
@@ -500,5 +511,11 @@ namespace SteamGuardDesktop.ViewModels
 
         /// <inheritdoc />
         partial void OnIsGuardCodeRequiredChanged(bool value) => OnPropertyChanged(nameof(IsCodeRequired));
+
+        /// <inheritdoc />
+        partial void OnIsRecoveringLostDeviceChanged(bool value) => OnPropertyChanged(nameof(IsSmsCodeRequired));
+
+        /// <inheritdoc />
+        partial void OnHasPendingActivationChanged(bool value) => OnPropertyChanged(nameof(IsSmsCodeRequired));
     }
 }

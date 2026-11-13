@@ -164,6 +164,7 @@ Paths:
 
 Responsibilities:
 - Build signed request parameters, send HTTPS requests, enforce timeouts, stop reading a response as soon as it exceeds the accepted size, and parse responses strictly.
+- Convert the byte form of a shared secret that Steam returns into the Base32 form that the authenticator and the stored accounts use, so that no secret encoding leaks into another layer.
 
 Boundary rules:
 - Must not mutate local account state.
@@ -233,7 +234,7 @@ flowchart LR
 | `/mobileconf/ajaxop` | Outbound | HTTPS GET with signed parameters plus `op`, `cid`, and `ck` | Valve | `needsauth` produces a re-authentication result; other failures produce a safe reason |
 | `/mobileconf/details/{id}` | Outbound | HTTPS GET with signed parameters using the `details` tag | Valve | A rejected request produces a safe reason; the HTML fragment is reduced to plain text |
 | `/IAuthenticationService/*` | Outbound | HTTPS GET and POST carrying a protobuf-JSON `input_json` payload | Valve | Credential failures return the message reported by Steam; transport failures produce a safe reason |
-| `/ITwoFactorService/*` | Outbound | HTTPS POST carrying a protobuf-JSON `input_json` payload, authorised with a bearer access token | Valve | Rejected authenticator operations produce a safe reason |
+| `/ITwoFactorService/*` | Outbound | HTTPS POST carrying a protobuf-JSON `input_json` payload, authorised with a bearer access token | Valve | Rejected authenticator operations produce a safe reason; an activation attempt reports whether Steam accepted it or expects another attempt with a newer activation code |
 | `INativeSecretBackend` | Local | Availability probe, then credential read, write, and delete by entry name | Application and operating system | A store that cannot be reached is reported as unavailable, and the encrypted fallback keeps the secret |
 
 ## 🔀 Key Processes
@@ -271,6 +272,8 @@ sequenceDiagram
 ```
 
 The password is encrypted with the RSA public key that Steam publishes, is used only for the exchange, and is cleared from the form as soon as the sign-in starts. The guard type is selected from the guards that Steam reports, so a code sent to the e-mail address and a code from an existing authenticator are both supported, while a challenge that only accepts an in-app approval reports that a code cannot be used. The access token is stored only when the account is already configured, because the token belongs to an account entry; an account that is signed in but not yet saved is told to enrol or recover an authenticator, which saves the account and then stores the token. A successful enrolment or recovery raises an event that refreshes the account list, and the sign-out action revokes the session through Steam and clears the form. Recovery of a device that is no longer available is issued through the challenge endpoints rather than the revocation code, and the issued authenticator is stored with the same secret store that a manual account setup uses.
+
+An enrolment is finalised in repeated attempts, because the activation code derived from the shared secret is only accepted for a short window. The management service generates a fresh activation code for each attempt and submits it together with the SMS code that Steam sent to the registered phone number, and the attempt is repeated while Steam reports that it wants another one. Both the enrolment and the recovery response carry the shared secret as bytes, which the client converts to Base32 before the service or the store sees the value, so the generator that validates and consumes it never receives a Base64 value.
 
 ### Code Generation
 
@@ -395,11 +398,12 @@ The principal dependency rules are:
 | Confirmation query parameters | `ConfirmationRequestBuilder` | `p`, `a`, `k`, `t`, `m`, and `tag`, followed by `op`, `cid`, and `ck` | Integration test asserting the encoded request | Must follow the current Steam protocol |
 | Confirmation type mapping | `SteamConfirmationType` | Numeric values reported by Steam map to domain values; unknown values are unsupported | Unit test | Unknown values must never be treated as decidable |
 | Device identifier | `DeviceIdentityProvider` | Lowercase SHA-1 of `android:` followed by the Steam ID 64 | Unit test with fixed identifiers | Must remain stable for an account |
+| Shared secret encoding | `SteamSharedSecretEncoder` | The bytes that Steam returns become unpadded Base32, and the authenticator accepts the result and produces the expected code | Unit test with a known secret and a known code | Must stay byte-compatible with the generator |
 | Solution and project layout | Repository root | Four projects, main project first, tests alphabetised | Architecture test | Additions must preserve the naming convention |
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, credential-store availability and fallback selection, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, the recovery of a protected file that can no longer be decrypted, the rejection of a response that exceeds the accepted size before it is buffered, and the containment of a write that the host refuses. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, credential-store availability and fallback selection, the conversion of an enrolled shared secret into the form the authenticator consumes, the SMS requirement of an activation, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, the recovery of a protected file that can no longer be decrypted, the rejection of a response that exceeds the accepted size before it is buffered, and the containment of a write that the host refuses. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
 
 Execute the principal automated verification with:
 

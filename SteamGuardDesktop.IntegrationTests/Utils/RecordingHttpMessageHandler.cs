@@ -74,6 +74,11 @@ namespace SteamGuardDesktop.IntegrationTests.Utils
         {
             Requests.Add(request);
 
+            if (request.Content is not null)
+            {
+                RequestBodies.Add(request.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult());
+            }
+
             if (failure is not null)
             {
                 throw failure;

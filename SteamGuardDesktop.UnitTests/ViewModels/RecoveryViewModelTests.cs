@@ -227,6 +227,22 @@ namespace SteamGuardDesktop.UnitTests.Presentation
 
             Assert.That(viewModel.HasIssuedRevocationCode);
             Assert.That(viewModel.IssuedRevocationCode, Is.EqualTo("R61387"));
+            Assert.That(viewModel.CanEnrolAuthenticator, Is.False);
+        }
+
+        [Test]
+        public void GivenAPendingActivation_WhenEnrollingAgain_ThenTheRequestIsRejected()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+
+            managementService.AuthenticatorToReturn = BuildEnrolledAuthenticator();
+
+            viewModel.EnrolAuthenticator();
+            viewModel.EnrolAuthenticator();
+
+            Assert.That(managementService.AddCallCount, Is.EqualTo(1));
+            Assert.That(viewModel.StatusMessage, Does.Contain("waiting to be activated"));
         }
 
         [Test]
@@ -368,6 +384,8 @@ namespace SteamGuardDesktop.UnitTests.Presentation
 
             public bool AddWasCalled { get; private set; }
 
+            public int AddCallCount { get; private set; }
+
             public bool FinalizeWasCalled { get; private set; }
 
             public bool RecoverWasCalled { get; private set; }
@@ -383,6 +401,7 @@ namespace SteamGuardDesktop.UnitTests.Presentation
             public AuthenticatorEnrolmentResult AddAuthenticator(string steamIdentifier, string accessToken)
             {
                 AddWasCalled = true;
+                AddCallCount += 1;
 
                 if (AuthenticatorToReturn is null)
                 {

@@ -97,6 +97,21 @@ namespace SteamGuardDesktop.UnitTests.Presentation
         }
 
         [Test]
+        public void GivenASignedInAccount_WhenEnrollingAnAuthenticator_ThenTheTokenIsStoredAfterTheAccount()
+        {
+            viewModel.SteamIdentifier = ValidSteamIdentifier;
+            viewModel.AccessToken = "access-token-value";
+            viewModel.SmsCode = "SMS01";
+            managementService.AuthenticatorToReturn = BuildEnrolledAuthenticator();
+
+            viewModel.EnrolAuthenticator();
+            viewModel.FinalizeAuthenticator();
+
+            Assert.That(accountService.SavedAccount, Is.Not.Null);
+            Assert.That(accountService.SavedAccessToken, Is.EqualTo("access-token-value"));
+        }
+
+        [Test]
         public void GivenASignedInAccount_WhenSigningOut_ThenTheSessionIsRevokedAndTheFormIsCleared()
         {
             viewModel.SteamIdentifier = ValidSteamIdentifier;

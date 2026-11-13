@@ -236,6 +236,7 @@
             <Button Content="Remove authenticator"
                     Click="OnRemoveAuthenticatorClick" />
             <Button Content="Enrol authenticator"
+                    IsVisible="{Binding Recovery.CanEnrolAuthenticator}"
                     Click="OnEnrolAuthenticatorClick" />
             <Button Content="Activate authenticator"
                     IsVisible="{Binding Recovery.HasPendingActivation}"

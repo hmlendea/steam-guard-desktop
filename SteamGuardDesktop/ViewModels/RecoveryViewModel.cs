@@ -112,6 +112,12 @@ namespace SteamGuardDesktop.ViewModels
         public bool HasIssuedRevocationCode => !string.IsNullOrWhiteSpace(IssuedRevocationCode);
 
         /// <summary>
+        /// Gets a value indicating whether a new authenticator may be enrolled, which is not the case while an
+        /// issued authenticator is still waiting to be activated.
+        /// </summary>
+        public bool CanEnrolAuthenticator => !HasPendingActivation;
+
+        /// <summary>
         /// Starts the sign-in with the credentials entered in the form.
         /// </summary>
         public void BeginSignIn()
@@ -315,6 +321,15 @@ namespace SteamGuardDesktop.ViewModels
                 return;
             }
 
+            if (HasPendingActivation)
+            {
+                ReportStatus(
+                    "An authenticator is already waiting to be activated. Activate it, or restart the enrolment " +
+                    "after storing the revocation code that was shown.");
+
+                return;
+            }
+
             AuthenticatorEnrolmentResult result = authenticatorManagementService.AddAuthenticator(
                 SteamIdentifier,
                 AccessToken);
@@ -379,6 +394,15 @@ namespace SteamGuardDesktop.ViewModels
             if (!saveResult.IsSuccessful)
             {
                 ReportStatus(ComposeAccountFailure(saveResult));
+
+                return;
+            }
+
+            AccountAccessTokenResult tokenResult = SaveRecoveredAccessToken();
+
+            if (!tokenResult.IsSuccessful)
+            {
+                ReportStatus(tokenResult.FailureReason);
 
                 return;
             }
@@ -541,7 +565,11 @@ namespace SteamGuardDesktop.ViewModels
         partial void OnIsRecoveringLostDeviceChanged(bool value) => OnPropertyChanged(nameof(IsSmsCodeRequired));
 
         /// <inheritdoc />
-        partial void OnHasPendingActivationChanged(bool value) => OnPropertyChanged(nameof(IsSmsCodeRequired));
+        partial void OnHasPendingActivationChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsSmsCodeRequired));
+            OnPropertyChanged(nameof(CanEnrolAuthenticator));
+        }
 
         /// <inheritdoc />
         partial void OnIssuedRevocationCodeChanged(string value) => OnPropertyChanged(nameof(HasIssuedRevocationCode));

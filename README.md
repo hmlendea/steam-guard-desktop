@@ -51,6 +51,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
 - Lists pending Steam mobile confirmations with type, creation time, headline, and safe context.
 - Approves or denies an individual confirmation and refreshes the list afterwards.
 - Stores account secrets in the platform credential store and removes them with the account.
+- Imports a documented account configuration file, then deletes the file so that its secrets are not retained on disk.
 - Signs in to Steam with an account name and password, exchanging the password over an RSA-encrypted request without persisting it.
 - Accepts the guard that Steam requests, whether it is a code sent to the e-mail address or a code from an existing authenticator.
 - Stores the access token that a sign-in issues once the account is saved, and revokes the session on sign-out.
@@ -114,6 +115,24 @@ dotnet test SteamGuardDesktop.slnx
 
 Account settings are stored by the application, and the runtime settings are declared in `SteamGuardSettings` and `DiagnosticsSettings`. The secrets themselves are never written to these files. The theme preference and the two privacy preferences are persisted in `settings.json` in the user application-data directory and are changed through the controls in the window.
 
+### Configuration Files
+
+| File | Scope | Purpose |
+|------|-------|---------|
+| `settings.json` | Per user | Theme preference and the privacy preferences, in the user application-data directory. |
+| An account configuration file | A single import | Steam ID 64, label, shared secret, identity secret, revocation code, and access token; deleted after a successful import. |
+
+An account configuration file uses the subsequent keys. Only `steamid` is mandatory.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `steamid` | `string` | The 64-bit Steam identifier of the account. |
+| `label` | `string` | A user-facing account label. |
+| `shared_secret` | `string` | The Base32 shared secret. |
+| `identity_secret` | `string` | The Base64 identity secret. |
+| `revocation_code` | `string` | The revocation code. |
+| `access_token` | `string` | The Steam access token used by the confirmation endpoints. |
+
 ### Settings
 
 The subsequent settings are recognised:
@@ -162,6 +181,7 @@ For the detailed description of how the application handles privacy and personal
 | Revocation code | Remove the authenticator from the account | Platform credential store, or the encrypted fallback | Until the account is removed | Yes |
 | Confirmation details | Describe a pending confirmation before a decision | In memory only | Discarded when the confirmation list is refreshed | Yes |
 | Theme and privacy preferences | Reproduce the interface and data-handling preferences | `settings.json` in the user application-data directory | Until the file is deleted | Yes |
+| Imported account configuration | Provide the secrets of an account once | The file that the user selects | Deleted after a successful import | Yes |
 | Diagnostics | Report failures without exposing secrets | Console and optional log file | Until the log file is deleted | Yes |
 
 ### Data Locations

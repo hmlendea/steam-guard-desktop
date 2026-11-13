@@ -47,6 +47,13 @@ namespace SteamGuardDesktop.Service.Account
         bool IsAccountConfigured(string steamIdentifier);
 
         /// <summary>
+        /// Imports an account from a configuration file and deletes the file afterwards.
+        /// </summary>
+        /// <param name="filePath">The path of the configuration file.</param>
+        /// <returns>The outcome of the operation.</returns>
+        AccountImportResult ImportAccount(string filePath);
+
+        /// <summary>
         /// Stores the access token that authenticates confirmation requests for an account.
         /// </summary>
         /// <param name="steamIdentifier">The 64-bit Steam identifier of the account.</param>

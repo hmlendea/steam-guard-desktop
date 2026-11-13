@@ -20,8 +20,7 @@ namespace SteamGuardDesktop.Service.Account
         IAccountStore accountStore,
         ISecretStore secretStore,
         IDeviceIdentityProvider deviceIdentityProvider,
-        IOtpCodeGenerator otpCodeGenerator,
-        ILogger logger) : IAccountService
+        IOtpCodeGenerator otpCodeGenerator,        IAccountConfigurationReader configurationReader,        ILogger logger) : IAccountService
     {
         private static string SecretEntryNamePrefix => "SteamGuardDesktop:";
 
@@ -154,6 +153,52 @@ namespace SteamGuardDesktop.Service.Account
             return accountStore
                 .GetAll()
                 .Any(candidate => string.Equals(candidate.SteamIdentifier, steamIdentifier, StringComparison.Ordinal));
+        }
+
+        /// <inheritdoc />
+        public AccountImportResult ImportAccount(string filePath)
+        {
+            AccountConfigurationReadResult readResult = configurationReader.Read(
+                filePath,
+                out SteamAccount? account,
+                out AuthenticatorSecrets? secrets);
+
+            if (!readResult.IsSuccessful || account is null || secrets is null)
+            {
+                logger.Warn(
+                    SteamGuardOperation.StoreSecrets,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.FailureReason, readResult.FailureReason));
+
+                return AccountImportResult.Failed(readResult.FailureReason);
+            }
+
+            AccountSaveResult saveResult = SaveAccount(account, secrets);
+
+            if (!saveResult.IsSuccessful)
+            {
+                return AccountImportResult.Failed(
+                    string.IsNullOrWhiteSpace(saveResult.FailureReason)
+                        ? string.Join(" ", saveResult.ValidationErrors)
+                        : saveResult.FailureReason);
+            }
+
+            bool isConfigurationFileRemaining = !configurationReader.Remove(filePath);
+
+            if (isConfigurationFileRemaining)
+            {
+                logger.Warn(
+                    SteamGuardOperation.StoreSecrets,
+                    OperationStatus.Failure,
+                    new LogInfo(SteamGuardInfoKey.FailureReason, "The imported configuration file could not be deleted."));
+            }
+
+            logger.Info(
+                SteamGuardOperation.StoreSecrets,
+                OperationStatus.Success,
+                new LogInfo(SteamGuardInfoKey.AccountIdentifier, saveResult.Account?.Identifier ?? string.Empty));
+
+            return AccountImportResult.Successful(saveResult.Account!, isConfigurationFileRemaining);
         }
 
         /// <inheritdoc />

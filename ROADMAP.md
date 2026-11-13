@@ -26,13 +26,12 @@ This roadmap describes the current focus, the planned labour for the next horizo
 ### Next 30 Days
 
 - Validate a generated code against the official Steam authenticator for the same time window.
-- Extend the theme tests to cover runtime system theme changes.
-- Document the account configuration import format and its validation.
+- Confirm credential store behaviour and application startup on each supported desktop platform.
 
 ### Next Quarter
 
-- Validate credential store behaviour on each supported desktop platform.
 - Add support for the remaining confirmation types once their protocol behaviour is confirmed.
+- Confirm the resolved platform theme against a live Windows, macOS, GNOME, and KDE session.
 
 ### No Fixed Horizon
 

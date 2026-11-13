@@ -248,6 +248,9 @@ namespace SteamGuardDesktop.UnitTests.Presentation
 
             public AccountRemovalResult RemoveAccount(string accountIdentifier) => AccountRemovalResult.Successful();
 
+            public AccountImportResult ImportAccount(string filePath) =>
+                AccountImportResult.Failed("Not supported by this stub.");
+
             public bool IsAccountConfigured(string steamIdentifier) => IsConfigured;
 
             public SteamGuardDesktop.Domain.Authenticator.AuthenticatorSecrets? GetSecrets(

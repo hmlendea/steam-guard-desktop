@@ -63,6 +63,7 @@ namespace SteamGuardDesktop
             services.AddSingleton<ISecretRedactor, SecretRedactor>();
             services.AddSingleton<IPlatformThemeResolver, PlatformThemeResolver>();
             services.AddSingleton<ISystemAccentColourProvider, SystemAccentColourProvider>();
+            services.AddSingleton<IThemeVariantResolver, ThemeVariantResolver>();
             services.AddSingleton<IThemeService, ThemeService>();
 
             services.AddSingleton<ISteamGuard, TOTPSteamGuard>();
@@ -82,6 +83,8 @@ namespace SteamGuardDesktop
             services.AddSingleton<IAccountStore>(_ => new EncryptedFileAccountStore(
                 System.IO.Path.Combine(dataDirectory, AccountStoreFileName),
                 keySeed));
+
+            services.AddSingleton<IAccountConfigurationReader, JsonAccountConfigurationReader>();
 
             services.AddSingleton<ISettingsStore>(_ => new JsonFileSettingsStore(
                 System.IO.Path.Combine(dataDirectory, SettingsStoreFileName)));

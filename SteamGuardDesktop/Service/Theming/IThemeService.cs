@@ -21,6 +21,11 @@ namespace SteamGuardDesktop.Service.Theming
         PlatformTheme ApplyTheme(ThemePreference themePreference);
 
         /// <summary>
+        /// Applies the theme again after the host reported a change in its light or dark preference.
+        /// </summary>
+        void RefreshFromHost();
+
+        /// <summary>
         /// Gets the accent colour configured in the host operating system.
         /// </summary>
         /// <returns>The accent colour as a hexadecimal value, or <c>null</c> when the host does not expose one.</returns>

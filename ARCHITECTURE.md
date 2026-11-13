@@ -315,7 +315,7 @@ The view model refuses a second decision while one is in progress, rejects unsup
 
 ## ⚙️ Platform Theming
 
-The theme resolver is a pure function over a `PlatformDescription` value: Windows resolves to the Fluent theme, macOS to the Aqua theme, GNOME to Adwaita, KDE to Breeze, and any unidentified environment to the documented fallback. `ThemeService` applies the user preference as an Avalonia theme variant, so the system, light, and dark variants are selected at runtime with System as the default. The accent colour is read from the host through `ISystemAccentColourProvider`, which reads the Windows accent colour hint, the macOS accent colour default, the GNOME accent colour setting, and the KDE accent colour declaration. Feature views consume shared resources from `Views/ThemeResources.axaml` rather than platform-specific values.
+The theme resolver is a pure function over a `PlatformDescription` value: Windows resolves to the Fluent theme, macOS to the Aqua theme, GNOME to Adwaita, KDE to Breeze, and any unidentified environment to the documented fallback. `ThemeService` applies the user preference as an Avalonia theme variant through `IThemeVariantResolver`, so the system, light, and dark variants are selected at runtime with System as the default, and `RefreshFromHost` reapplies the variant when the host reports a change in its light or dark preference. The accent colour is read from the host through `ISystemAccentColourProvider`, which reads the Windows accent colour hint, the macOS accent colour default, the GNOME accent colour setting, and the KDE accent colour declaration. Feature views consume shared resources from `Views/ThemeResources.axaml` rather than platform-specific values.
 
 ## 🧵 Cross-Cutting Concerns
 
@@ -338,6 +338,7 @@ Failures are translated into result objects with safe reasons at the boundary th
 | `SteamGuardSettings` | In-code defaults, created by the composition root, superseded by the persisted preference file | Base addresses, network timeout, response size limit, and privacy toggles | Contains no secrets |
 | `DiagnosticsSettings` | In-code defaults, created by the composition root | Minimum level, line format, and log file path | Never contains secrets |
 | User preferences | `settings.json` in the user application-data directory | Theme preference, inactive-window lock, and secret reveal | Contains no secrets; every secret lives in the credential store |
+| Imported account configuration | A file selected by the user | Steam ID 64, label, and secrets supplied once | Deleted after a successful import; secrets move to the credential store |
 | Account metadata | Encrypted account file | Labels, identifiers, device identifiers, and secret entry names | Secret entry names only; values live in the credential store |
 
 ### Concurrency and Resource Use

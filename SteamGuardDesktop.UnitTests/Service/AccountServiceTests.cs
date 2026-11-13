@@ -37,6 +37,7 @@ namespace SteamGuardDesktop.UnitTests.Service
                 new OtpCodeGenerator(
                     new SteamGuard.TOTP.SteamGuard(new FixedTimeStepProvider(1L)),
                     new FixedClock(System.DateTimeOffset.UnixEpoch)),
+                new SteamGuardDesktop.DataAccess.Accounts.JsonAccountConfigurationReader(),
                 new NuciLog.Core.NullLogger());
         }
 
@@ -109,6 +110,7 @@ namespace SteamGuardDesktop.UnitTests.Service
                 new OtpCodeGenerator(
                     new SteamGuard.TOTP.SteamGuard(new FixedTimeStepProvider(1L)),
                     new FixedClock(System.DateTimeOffset.UnixEpoch)),
+                new SteamGuardDesktop.DataAccess.Accounts.JsonAccountConfigurationReader(),
                 new NuciLog.Core.NullLogger());
 
             AccountSaveResult result = failingAccountService.SaveAccount(BuildAccount(), BuildSecrets());

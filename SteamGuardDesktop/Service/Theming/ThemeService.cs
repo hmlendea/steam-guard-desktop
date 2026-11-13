@@ -13,7 +13,8 @@ namespace SteamGuardDesktop.Service.Theming
     /// </summary>
     public sealed class ThemeService(
         IPlatformThemeResolver themeResolver,
-        ISystemAccentColourProvider accentColourProvider) : IThemeService
+        ISystemAccentColourProvider accentColourProvider,
+        IThemeVariantResolver themeVariantResolver) : IThemeService
     {
         private static string CurrentDesktopVariable => "XDG_CURRENT_DESKTOP";
 
@@ -25,14 +26,20 @@ namespace SteamGuardDesktop.Service.Theming
         /// <inheritdoc />
         public PlatformTheme ApplyTheme(ThemePreference themePreference)
         {
-            ThemeVariant variant = ResolveThemeVariant(themePreference);
-
-            if (Application.Current is not null)
-            {
-                Application.Current.RequestedThemeVariant = variant;
-            }
+            ApplyVariantName(themeVariantResolver.ResolveVariantName(themePreference));
 
             return GetCurrentTheme();
+        }
+
+        /// <inheritdoc />
+        public void RefreshFromHost()
+        {
+            if (Application.Current is null)
+            {
+                return;
+            }
+
+            ApplyVariantName(Application.Current.ActualThemeVariant.Key as string ?? "Default");
         }
 
         /// <inheritdoc />
@@ -54,19 +61,28 @@ namespace SteamGuardDesktop.Service.Theming
         /// <inheritdoc />
         public bool IsUsingFallbackTheme() => GetCurrentTheme() == PlatformTheme.Fallback;
 
-        private static ThemeVariant ResolveThemeVariant(ThemePreference themePreference)
+        private static void ApplyVariantName(string variantName)
         {
-            if (themePreference == ThemePreference.Light)
+            if (Application.Current is null)
             {
-                return ThemeVariant.Light;
+                return;
             }
 
-            if (themePreference == ThemePreference.Dark)
+            if (string.Equals(variantName, "Light", StringComparison.Ordinal))
             {
-                return ThemeVariant.Dark;
+                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+
+                return;
             }
 
-            return ThemeVariant.Default;
+            if (string.Equals(variantName, "Dark", StringComparison.Ordinal))
+            {
+                Application.Current.RequestedThemeVariant = ThemeVariant.Dark;
+
+                return;
+            }
+
+            Application.Current.RequestedThemeVariant = ThemeVariant.Default;
         }
 
         private static PlatformDescription DescribeHost() => new()

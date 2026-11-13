@@ -120,9 +120,15 @@ namespace SteamGuardDesktop.Service.Storage
 
             byte[] payload = File.ReadAllBytes(filePath);
 
-            if (payload.Length <= NonceSizeBytes + TagSizeBytes)
+            if (payload.Length == 0)
             {
                 return [];
+            }
+
+            if (payload.Length <= NonceSizeBytes + TagSizeBytes)
+            {
+                throw new CryptographicException(
+                    $"The encrypted secret file at {filePath} is too short to contain a valid payload.");
             }
 
             byte[] nonce = payload[..NonceSizeBytes];

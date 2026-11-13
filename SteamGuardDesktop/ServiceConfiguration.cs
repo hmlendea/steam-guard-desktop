@@ -71,15 +71,16 @@ namespace SteamGuardDesktop
             services.AddSingleton<ISteamResponseParser, SteamResponseParser>();
 
             services.AddSingleton<INativeSecretBackend>(_ => NativeSecretBackendFactory.Create());
-            services.AddSingleton<ISecretStore>(serviceProvider => new ResilientSecretStore(
+            services.AddSingleton<ISecretStore>(serviceProvider => CreateSecretStore(
                 serviceProvider.GetRequiredService<INativeSecretBackend>(),
-                new EncryptedFileSecretStore(
-                    System.IO.Path.Combine(dataDirectory, SecretStoreFileName),
-                    keySeed)));
+                System.IO.Path.Combine(dataDirectory, SecretStoreFileName),
+                keySeed,
+                serviceProvider.GetRequiredService<ILogger>()));
 
-            services.AddSingleton<IAccountStore>(_ => new EncryptedFileAccountStore(
+            services.AddSingleton<IAccountStore>(serviceProvider => CreateAccountStore(
                 System.IO.Path.Combine(dataDirectory, AccountStoreFileName),
-                keySeed));
+                keySeed,
+                serviceProvider.GetRequiredService<ILogger>()));
 
             services.AddSingleton<IAccountConfigurationReader, JsonAccountConfigurationReader>();
 
@@ -105,6 +106,51 @@ namespace SteamGuardDesktop
             services.AddSingleton<MainViewModel>();
 
             return services.BuildServiceProvider();
+        }
+
+        private static ISecretStore CreateSecretStore(
+            INativeSecretBackend nativeBackend,
+            string filePath,
+            string keySeed,
+            ILogger logger)
+        {
+            ISecretStore secretStore = ProtectedStateStoreFactory.CreateSecretStore(
+                nativeBackend,
+                filePath,
+                keySeed,
+                out bool wasRecovered);
+
+            if (wasRecovered)
+            {
+                ReportRecoveredFile(filePath, logger);
+            }
+
+            return secretStore;
+        }
+
+        private static IAccountStore CreateAccountStore(string filePath, string keySeed, ILogger logger)
+        {
+            IAccountStore accountStore = ProtectedStateStoreFactory.CreateAccountStore(
+                filePath,
+                keySeed,
+                out bool wasRecovered);
+
+            if (wasRecovered)
+            {
+                ReportRecoveredFile(filePath, logger);
+            }
+
+            return accountStore;
+        }
+
+        private static void ReportRecoveredFile(string filePath, ILogger logger)
+        {
+            logger.Error(
+                SteamGuardOperation.LaunchApplication,
+                OperationStatus.Failure,
+                new LogInfo(
+                    SteamGuardInfoKey.FailureReason,
+                    "A protected state file could not be decrypted and was moved aside."));
         }
 
         private static ILogger CreateLogger(DiagnosticsSettings settings)

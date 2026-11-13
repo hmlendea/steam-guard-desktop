@@ -178,10 +178,12 @@ Paths:
 Responsibilities:
 - Persist encrypted account metadata and store named secrets in the platform credential store.
 - Fall back to an encrypted file only when the native store is unavailable.
+- Move an encrypted file that can no longer be decrypted aside at startup so that the application starts with empty state instead of failing.
 
 Boundary rules:
 - Must never persist a secret in plain text.
 - Must report unavailability instead of silently discarding a secret.
+- Must never lose a protected file silently: an unreadable file is preserved beside the original.
 
 ### Presentation
 
@@ -381,6 +383,7 @@ The principal dependency rules are:
 | Release packaging | A published release runs `.github/workflows/github-release.yml`, which delegates to the shared release script | Artefacts are produced by one script rather than by per-platform repository logic |
 | Availability | Local code generation works offline | Confirmations require Steam connectivity |
 | Recovery | A missing or unreadable secret produces an explicit unavailable state | The user re-enters the secrets |
+| Unreadable protected file | A file that cannot be decrypted is moved to a `.unreadable` sibling during service composition | The application still starts, and the rejected file is kept for inspection |
 
 ## 🛡️ Compatibility Contracts
 
@@ -394,7 +397,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, and encrypted store behaviour. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, and the recovery of a protected file that can no longer be decrypted. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
 
 Execute the principal automated verification with:
 

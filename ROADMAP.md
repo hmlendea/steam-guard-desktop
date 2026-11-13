@@ -18,8 +18,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 ## 🎯 Current Focus
 
 - **In Progress**: Live account validation - Verify that a generated code matches the official Steam authenticator for the same time window.
-- **In Progress**: Release artefact verification - Confirm that a published release attaches a packaged archive for every supported runtime identifier.
-- **Planned**: Platform credential validation - Verify secret storage on Linux, macOS, and Windows.
+- **In Progress**: Platform credential validation - Verify secret storage on Linux, macOS, and Windows; the Linux Secret Service round trip is verified and the fallback file is now recovered rather than fatal.
 
 ## 🗺️ Planned Labour
 
@@ -44,7 +43,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 |-----------|---------------|---------|--------|
 | Live account validation | Next 30 days | A generated code matches the official Steam authenticator for the same time window. | In Progress |
 | Packaged distribution | Next 30 days | A published release produces a packaged build for every supported runtime identifier; the local release script already produces the seven expected archives. | In Progress |
-| Platform credential validation | Next quarter | Verified secret storage on Linux, macOS, and Windows; the Linux Secret Service round trip is verified. | In Progress |
+| Platform credential validation | Next quarter | Verified secret storage on Linux, macOS, and Windows; the Linux Secret Service round trip is verified and unreadable state files no longer abort startup. | In Progress |
 
 ## ⚠️ Dependencies and Risks
 
@@ -54,6 +53,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 - Account recovery depends on a sign-in - Recovery cannot complete without an authenticated session - Keep the password out of persistence and require an explicit confirmation step.
 - Shared release script - Release packaging depends on a remotely hosted script that can change independently of this repository - Keep the workflow pinned to the same script that `release.sh` uses and verify a published release after each change.
 - Unsigned release artefacts - The release script produces unsigned archives, so hosts report an unknown publisher - Publish a checksum beside each archive and document the verification step for users.
+- Machine-bound encrypted fallback - The fallback key is derived from the machine and user identifiers, so a copied or renamed profile cannot be decrypted - Move an unreadable file aside at startup and document that the affected accounts must be added again.
 
 ## 🚫 Out of Scope
 

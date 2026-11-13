@@ -127,9 +127,15 @@ namespace SteamGuardDesktop.DataAccess.Accounts
 
             byte[] payload = File.ReadAllBytes(filePath);
 
-            if (payload.Length <= NonceSizeBytes + TagSizeBytes)
+            if (payload.Length == 0)
             {
                 return [];
+            }
+
+            if (payload.Length <= NonceSizeBytes + TagSizeBytes)
+            {
+                throw new CryptographicException(
+                    $"The encrypted account file at {filePath} is too short to contain a valid payload.");
             }
 
             byte[] nonce = payload[..NonceSizeBytes];

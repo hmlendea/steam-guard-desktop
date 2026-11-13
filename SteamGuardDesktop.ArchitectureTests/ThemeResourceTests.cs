@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -26,6 +28,13 @@ namespace SteamGuardDesktop.ArchitectureTests
             "WarningBrush",
             "FailureBrush"
         ];
+
+        private static string[] ThemeMarkupFiles => [.. Directory
+            .EnumerateFiles(
+                Path.Combine(ArchitecturePaths.ProductionSourceRoot, "Views"),
+                "*.axaml",
+                SearchOption.AllDirectories)
+            .OrderBy(filePath => filePath, StringComparer.Ordinal)];
 
         [Test]
         public void GivenTheSharedTheme_WhenChecked_ThenItDeclaresEveryRequiredResource()
@@ -64,6 +73,27 @@ namespace SteamGuardDesktop.ArchitectureTests
             Assert.That(windowMarkup, Does.Not.Contain("Foreground=\"#"));
             Assert.That(windowMarkup, Does.Contain("{DynamicResource AppBackgroundBrush}"));
             Assert.That(windowMarkup, Does.Contain("{DynamicResource AccentBrush}"));
+        }
+
+        [Test]
+        public void GivenTheThemeMarkup_WhenChecked_ThenNoHostDependentStylingIsReferenced()
+        {
+            List<string> failures = [];
+
+            foreach (string filePath in ThemeMarkupFiles)
+            {
+                string markup = File.ReadAllText(filePath);
+
+                if (markup.Contains("Platform=", StringComparison.Ordinal) ||
+                    markup.Contains("ActualThemeVariant", StringComparison.Ordinal) ||
+                    markup.Contains("Background=\"#", StringComparison.Ordinal) ||
+                    markup.Contains("Foreground=\"#", StringComparison.Ordinal))
+                {
+                    failures.Add(filePath);
+                }
+            }
+
+            Assert.That(failures, Is.Empty, string.Join(Environment.NewLine, failures));
         }
     }
 }

@@ -96,7 +96,7 @@ dotnet run --project SteamGuardDesktop
 
 ## 📦 Installation
 
-The application is currently distributed as source only.
+The application is distributed as source. The release workflow produces a packaged archive for each supported platform, and these archives are attached to the published release.
 
 ### Installation from Source
 
@@ -120,7 +120,7 @@ Account settings are stored by the application, and the runtime settings are dec
 
 | File | Scope | Purpose |
 |------|-------|---------|
-| `settings.json` | Per user | Theme preference and the privacy preferences, in the user application-data directory. |
+| `settings.json` | Per user | The privacy preferences, in the user application-data directory. |
 | An account configuration file | A single import | Steam ID 64, label, shared secret, identity secret, revocation code, and access token; deleted after a successful import. |
 
 An account configuration file uses the subsequent keys. Only `steamid` is mandatory.
@@ -180,7 +180,7 @@ For the detailed description of how the application handles privacy and personal
 | Steam access token | Authenticate confirmation requests | Platform credential store, or the encrypted fallback | Until the account is removed | Yes |
 | Revocation code | Remove the authenticator from the account | Platform credential store, or the encrypted fallback | Until the account is removed | Yes |
 | Confirmation details | Describe a pending confirmation before a decision | In memory only | Discarded when the confirmation list is refreshed | Yes |
-| Theme and privacy preferences | Reproduce the interface and data-handling preferences | `settings.json` in the user application-data directory | Until the file is deleted | Yes |
+| Privacy preferences | Reproduce the data-handling preferences | `settings.json` in the user application-data directory | Until the file is deleted | Yes |
 | Imported account configuration | Provide the secrets of an account once | The file that the user selects | Deleted after a successful import | Yes |
 | Diagnostics | Report failures without exposing secrets | Console and optional log file | Until the log file is deleted | Yes |
 

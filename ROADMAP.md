@@ -19,6 +19,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 
 - **In Progress**: Live account validation - Verify that a generated code matches the official Steam authenticator for the same time window.
 - **In Progress**: Platform credential validation - Verify secret storage on Linux, macOS, and Windows; the Linux Secret Service round trip is verified and the fallback file is now recovered rather than fatal.
+- **In Progress**: Transport hardening - Reject a Steam response before it is buffered; the accepted-size limit is now enforced while reading and the live endpoints still need to be re-checked against a real session.
 
 ## 🗺️ Planned Labour
 
@@ -27,6 +28,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 - Validate a generated code against the official Steam authenticator for the same time window.
 - Publish the first tagged release and confirm that the workflow attaches an archive for every supported runtime identifier.
 - Confirm credential store behaviour and application startup on macOS and Windows, where the Linux secret store has already been verified.
+- Re-check the sign-in, confirmation, and server-time responses against a live session now that the accepted-size limit is enforced while reading.
 
 ### Next Quarter
 
@@ -44,6 +46,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 | Live account validation | Next 30 days | A generated code matches the official Steam authenticator for the same time window. | In Progress |
 | Packaged distribution | Next 30 days | A published release produces a packaged build for every supported runtime identifier; the local release script already produces the seven expected archives. | In Progress |
 | Platform credential validation | Next quarter | Verified secret storage on Linux, macOS, and Windows; the Linux Secret Service round trip is verified and unreadable state files no longer abort startup. | In Progress |
+| Transport hardening | Next 30 days | A Steam response that exceeds the accepted size is rejected before it is buffered, and the live endpoints are re-checked against a real session. | In Progress |
 
 ## ⚠️ Dependencies and Risks
 
@@ -54,6 +57,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 - Shared release script - Release packaging depends on a remotely hosted script that can change independently of this repository - Keep the workflow pinned to the same script that `release.sh` uses and verify a published release after each change.
 - Unsigned release artefacts - The release script produces unsigned archives, so hosts report an unknown publisher - Publish a checksum beside each archive and document the verification step for users.
 - Machine-bound encrypted fallback - The fallback key is derived from the machine and user identifiers, so a copied or renamed profile cannot be decrypted - Move an unreadable file aside at startup and document that the affected accounts must be added again.
+- Shared release script duplication - The workflow and `release.sh` name the script through two different upstream URLs that currently serve identical content - Keep both verified against each other and prefer the URL the release script itself uses.
 
 ## 🚫 Out of Scope
 

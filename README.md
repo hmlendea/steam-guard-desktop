@@ -143,7 +143,7 @@ The subsequent settings are recognised:
 | Steam Guard | `SteamApiBaseAddress` | `string` | `https://api.steampowered.com/` | Yes | Base address used to query the Steam server time. |
 | Steam Guard | `SteamCommunityBaseAddress` | `string` | `https://steamcommunity.com/` | Yes | Base address used for the confirmation endpoints. |
 | Steam Guard | `NetworkTimeoutSeconds` | `int` | `30` | Yes | Timeout applied to Steam web requests. |
-| Steam Guard | `MaximumResponseBytes` | `int` | `1048576` | Yes | Maximum accepted size of a Steam response. |
+| Steam Guard | `MaximumResponseBytes` | `int` | `1048576` | Yes | Maximum accepted size of a Steam response; reading stops before this size is exceeded. |
 | Steam Guard | `IsAccountHiddenWhenInactive` | `bool` | `true` | No | Hides account details while the window is inactive. Persisted in `settings.json`. |
 | Steam Guard | `IsSecretRevealAllowed` | `bool` | `false` | No | Allows secrets to be revealed on explicit request. Persisted in `settings.json`. |
 | Diagnostics | `MinimumLevel` | `LogLevel` | `Info` | Yes | Minimum severity written to diagnostics. |

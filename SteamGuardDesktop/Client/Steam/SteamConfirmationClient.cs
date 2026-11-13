@@ -99,7 +99,12 @@ namespace SteamGuardDesktop.Client.Steam
                     return SteamClientResult<long>.Failed(DescribeStatus(response.StatusCode));
                 }
 
-                string payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                string? payload = BoundedResponseReader.ReadAsString(response, settings.MaximumResponseBytes);
+
+                if (payload is null)
+                {
+                    return SteamClientResult<long>.Failed("The Steam response exceeded the accepted size.");
+                }
 
                 if (!responseParser.TryParse(payload, out GetServerTimeResponse? serverTimeResponse) ||
                     serverTimeResponse?.Response is null ||
@@ -319,9 +324,9 @@ namespace SteamGuardDesktop.Client.Steam
                     return SteamClientResult<string>.Failed(DescribeStatus(response.StatusCode));
                 }
 
-                string payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                string? payload = BoundedResponseReader.ReadAsString(response, settings.MaximumResponseBytes);
 
-                if (payload.Length > settings.MaximumResponseBytes)
+                if (payload is null)
                 {
                     return SteamClientResult<string>.Failed("The Steam response exceeded the accepted size.");
                 }

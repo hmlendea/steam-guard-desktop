@@ -232,6 +232,61 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
             Assert.That(redactor.SanitisedAddresses, Has.None.Contains(IdentitySecret));
         }
 
+        [Test]
+        public void GivenAServerTimeResponseOverTheAcceptedSize_WhenRequestingIt_ThenTheRequestFails()
+        {
+            SteamGuardSettings settings = new() { MaximumResponseBytes = 16 };
+
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse(ServerTimePayload)
+            ]);
+
+            SteamConfirmationClient client = BuildClient(handler, new SecretRedactor(), settings);
+
+            SteamClientResult<long> result = client.GetServerTime();
+
+            Assert.That(result.IsSuccessful, Is.False);
+            Assert.That(result.FailureReason, Is.EqualTo("The Steam response exceeded the accepted size."));
+        }
+
+        [Test]
+        public void GivenAConfirmationDetailsResponseOverTheAcceptedSize_WhenRequestingIt_ThenTheRequestFails()
+        {
+            SteamGuardSettings settings = new() { MaximumResponseBytes = 16 };
+
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse(ServerTimePayload),
+                RecordingHttpMessageHandler.CreateJsonResponse("{\"html\":\"<div>details</div>\"}")
+            ]);
+
+            SteamConfirmationClient client = BuildClient(handler, new SecretRedactor(), settings);
+
+            SteamClientResult<string> result = client.GetConfirmationDetails(BuildContext(), "613");
+
+            Assert.That(result.IsSuccessful, Is.False);
+            Assert.That(result.FailureReason, Is.EqualTo("The Steam response exceeded the accepted size."));
+        }
+
+        [Test]
+        public void GivenAServerTimeResponseWithinTheAcceptedSize_WhenRequestingIt_ThenItSucceeds()
+        {
+            SteamGuardSettings settings = new() { MaximumResponseBytes = 4096 };
+
+            RecordingHttpMessageHandler handler = new(
+            [
+                RecordingHttpMessageHandler.CreateJsonResponse(ServerTimePayload)
+            ]);
+
+            SteamConfirmationClient client = BuildClient(handler, new SecretRedactor(), settings);
+
+            SteamClientResult<long> result = client.GetServerTime();
+
+            Assert.That(result.IsSuccessful, Is.True);
+            Assert.That(result.Value, Is.EqualTo(1617591917L));
+        }
+
         private static ConfirmationRequestContext BuildContext() => new()
         {
             DeviceIdentifier = "186afecb275bf6db9bb855caa9c916dc56b2dc6a",
@@ -248,12 +303,17 @@ namespace SteamGuardDesktop.IntegrationTests.Steam
 
         private static SteamConfirmationClient BuildClient(
             RecordingHttpMessageHandler handler,
-            ISecretRedactor redactor) => new(
+            ISecretRedactor redactor) => BuildClient(handler, redactor, new SteamGuardSettings());
+
+        private static SteamConfirmationClient BuildClient(
+            RecordingHttpMessageHandler handler,
+            ISecretRedactor redactor,
+            SteamGuardSettings settings) => new(
             new HttpClient(handler),
             redactor,
             new SteamResponseParser(),
             new ConfirmationRequestBuilder(new ConfirmationRequestSigner()),
             new NullLogger(),
-            new SteamGuardSettings());
+            settings);
     }
 }

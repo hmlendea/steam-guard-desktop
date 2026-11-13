@@ -163,7 +163,7 @@ Paths:
 - `SteamGuardDesktop/Client/Steam`
 
 Responsibilities:
-- Build signed request parameters, send HTTPS requests, enforce timeouts and response size limits, and parse responses strictly.
+- Build signed request parameters, send HTTPS requests, enforce timeouts, stop reading a response as soon as it exceeds the accepted size, and parse responses strictly.
 
 Boundary rules:
 - Must not mutate local account state.
@@ -321,7 +321,7 @@ The application presents one fixed look on every operating system and desktop en
 
 ### Security and Privacy
 
-Secrets are treated as credentials. They are erased from the setup form after a successful save, written only to the platform credential store or the encrypted fallback, and never logged. `SteamGuardInfoKey` declares sensitive structured keys so the logger masks secret, token, signature, and address values. Request addresses are sanitised before diagnostics are emitted. Approving or denying a confirmation requires an explicit user action. Account details, the displayed code, the confirmation list, and confirmation details are concealed when the window loses focus while `SteamGuardSettings.IsAccountHiddenWhenInactive` is enabled. Entered secrets are concealed unless `SteamGuardSettings.IsSecretRevealAllowed` is enabled and the user reveals them explicitly.
+Secrets are treated as credentials. They are erased from the setup form after a successful save, written only to the platform credential store or the encrypted fallback, and never logged. `SteamGuardInfoKey` declares sensitive structured keys so the logger masks secret, token, signature, and address values. Request addresses are sanitised before diagnostics are emitted. Approving or denying a confirmation requires an explicit user action. Account details, the displayed code, the confirmation list, and confirmation details are concealed when the window loses focus while `SteamGuardSettings.IsAccountHiddenWhenInactive` is enabled. Entered secrets are concealed unless `SteamGuardSettings.IsSecretRevealAllowed` is enabled and the user reveals them explicitly. Every response body is read through `BoundedResponseReader`, which stops before the accepted size is exceeded, so a hostile or broken peer cannot force an unbounded allocation.
 
 ### Error Handling
 
@@ -397,7 +397,7 @@ The principal dependency rules are:
 
 ## ✅ Testing and Verification
 
-The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, and the recovery of a protected file that can no longer be decrypted. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
+The solution separates unit, integration, and architecture tests. Unit tests verify code generation with known vectors, countdown boundaries, expiry detection, device identifiers, confirmation signatures, type mapping, HTML-to-text conversion, secret redaction, password encryption, request payload construction, account validation, access-token persistence, and the sign-in and recovery view model. Integration tests use a scripted HTTP handler to verify signed query parameters, session cookies, confirmation details, sign-in exchanges, guard submission, token polling, authenticator status, removal, enrolment, lost-device recovery, error translation, re-authentication results, encrypted store behaviour, the recovery of a protected file that can no longer be decrypted, and the rejection of a response that exceeds the accepted size before it is buffered. Architecture tests enforce the layer dependency matrix, project and solution conventions, source-file conventions, and the shared theme resources, the single forced theme variant, and the absence of host-dependent or hardcoded visual values in the view markup.
 
 Execute the principal automated verification with:
 

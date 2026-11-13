@@ -622,9 +622,9 @@ namespace SteamGuardDesktop.Client.Steam
                     return SteamClientResult<SteamUnifiedResponsePayload>.Failed(DescribeStatus(response.StatusCode));
                 }
 
-                string responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                string? responseBody = BoundedResponseReader.ReadAsString(response, settings.MaximumResponseBytes);
 
-                if (responseBody.Length > settings.MaximumResponseBytes)
+                if (responseBody is null)
                 {
                     return SteamClientResult<SteamUnifiedResponsePayload>.Failed("The Steam response exceeded the accepted size.");
                 }

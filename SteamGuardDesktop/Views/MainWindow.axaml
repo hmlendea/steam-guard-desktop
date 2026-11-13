@@ -1,0 +1,271 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SteamGuardDesktop.ViewModels"
+        xmlns:automation="using:Avalonia.Automation"
+        x:Class="SteamGuardDesktop.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Steam Guard Desktop"
+        Width="1040"
+        Height="700"
+        MinWidth="560"
+        MinHeight="480">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://SteamGuardDesktop/Views/ThemeResources.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <DockPanel Background="{DynamicResource AppBackgroundBrush}">
+    <Border DockPanel.Dock="Bottom"
+            Padding="{DynamicResource PagePadding}">
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding OutcomeMessage}"
+                   Foreground="{DynamicResource FailureBrush}"
+                   IsVisible="{Binding HasFailure}"
+                   TextWrapping="Wrap" />
+        <TextBlock Text="{Binding OutcomeMessage}"
+                   Foreground="{DynamicResource SuccessBrush}"
+                   AutomationProperties.Name="Successful outcome"
+                   IsVisible="{Binding HasSuccess}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel DockPanel.Dock="Top"
+                Margin="{DynamicResource PagePadding}"
+                Orientation="Horizontal"
+                Spacing="8">
+      <TextBlock VerticalAlignment="Center"
+                 FontSize="{DynamicResource HeadingFontSize}"
+                 Foreground="{DynamicResource AppForegroundBrush}"
+                 Text="Steam Guard Desktop" />
+      <Button Content="Reveal account"
+              IsVisible="{Binding AreAccountDetailsConcealed}"
+              AutomationProperties.Name="Reveal concealed account details"
+              Click="OnToggleAccountVisibilityClick" />
+    </StackPanel>
+
+    <Grid ColumnDefinitions="Auto,*">
+      <Border Grid.Column="0"
+              Width="{DynamicResource SidebarWidth}"
+              Background="{DynamicResource PanelBackgroundBrush}"
+              BorderBrush="{DynamicResource PanelBorderBrush}"
+              BorderThickness="0,0,1,0">
+      <StackPanel Margin="{DynamicResource PagePadding}"
+                  Spacing="8">
+        <TextBlock Foreground="{DynamicResource SecondaryForegroundBrush}"
+                   Text="Accounts" />
+
+        <ListBox ItemsSource="{Binding Accounts}"
+                 SelectedItem="{Binding SelectedAccount}"
+                 AutomationProperties.Name="Configured accounts">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:AccountItemViewModel">
+              <StackPanel Spacing="2">
+                <TextBlock Foreground="{DynamicResource AppForegroundBrush}"
+                           Text="{Binding Label}" />
+                <TextBlock FontSize="{DynamicResource StatusFontSize}"
+                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                           Text="{Binding SteamIdentifier}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Button Content="Refresh code"
+                Click="OnRefreshCodeClick" />
+        <Button Content="Copy code"
+                Click="OnCopyCodeClick" />
+        <Button Content="Refresh confirmations"
+                Click="OnRefreshConfirmationsClick" />
+        <Button Content="Remove account"
+                Click="OnRemoveAccountClick" />
+      </StackPanel>
+      </Border>
+
+      <ScrollViewer Grid.Column="1"
+                    Margin="{DynamicResource PagePadding}">
+        <StackPanel Spacing="12">
+          <TextBlock Text="{Binding Authenticator.CurrentCode}"
+                     AutomationProperties.Name="Current Steam Guard code"
+                     FontSize="{DynamicResource CodeDisplayFontSize}"
+                     Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock Text="{Binding Authenticator.RemainingSeconds}"
+                     AutomationProperties.Name="Seconds remaining for the current code"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
+          <TextBlock Text="The system clock differs from the Steam clock."
+                     Foreground="{DynamicResource WarningBrush}"
+                     IsVisible="{Binding Authenticator.HasClockWarning}"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="The account secrets are invalid or unavailable."
+                     Foreground="{DynamicResource WarningBrush}"
+                     IsVisible="{Binding Authenticator.HasSecretProblem}"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="The credential store is unavailable."
+                     Foreground="{DynamicResource WarningBrush}"
+                     IsVisible="{Binding IsSecretStoreUnavailable}"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="Account details are hidden while the window is inactive."
+                     Foreground="{DynamicResource WarningBrush}"
+                     IsVisible="{Binding AreAccountDetailsConcealed}"
+                     TextWrapping="Wrap" />
+
+          <TextBlock Text="Pending confirmations"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
+
+          <ListBox AutomationProperties.Name="Pending confirmations"
+                   ItemsSource="{Binding Confirmations}"
+                   SelectedItem="{Binding SelectedConfirmation}"
+                   MaxHeight="220">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ConfirmationItemViewModel">
+                <StackPanel Spacing="2">
+                  <TextBlock Foreground="{DynamicResource AppForegroundBrush}"
+                             Text="{Binding Headline}" />
+                  <TextBlock FontSize="{DynamicResource StatusFontSize}"
+                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                             Text="{Binding TypeName}" />
+                  <TextBlock FontSize="{DynamicResource StatusFontSize}"
+                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                             Text="{Binding Summary}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <TextBlock Text="{Binding ConfirmationDetails}"
+                     IsVisible="{Binding HasConfirmationDetails}"
+                     TextWrapping="Wrap" />
+
+          <ProgressBar IsIndeterminate="True"
+                       IsVisible="{Binding IsBusy}" />
+
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8">
+            <TextBlock VerticalAlignment="Center"
+                       FontSize="{DynamicResource StatusFontSize}"
+                       Text="{Binding SelectedConfirmation.CreatedAtDisplay}" />
+            <Button Content="Show details"
+                    IsEnabled="{Binding !IsBusy}"
+                    Click="OnShowDetailsClick" />
+            <Button Content="Approve"
+                    IsEnabled="{Binding !IsBusy}"
+                    Click="OnApproveClick" />
+            <Button Content="Deny"
+                    IsEnabled="{Binding !IsBusy}"
+                    Click="OnDenyClick" />
+          </StackPanel>
+
+          <TextBlock Text="Settings"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
+
+          <CheckBox Content="Hide account details while the window is inactive"
+                    IsChecked="{Binding IsAccountLockingEnabled}" />
+          <CheckBox Content="Allow secrets to be revealed on request"
+                    IsChecked="{Binding IsSecretRevealEnabled}" />
+
+          <TextBlock Text="Account setup"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
+
+          <TextBox Watermark="Steam ID 64"
+                   Text="{Binding AccountSetup.SteamIdentifier}" />
+          <TextBox Watermark="Label"
+                   Text="{Binding AccountSetup.Label}" />
+          <TextBox Watermark="Shared secret"
+                   Text="{Binding AccountSetup.SharedSecret}"
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
+          <TextBox Watermark="Identity secret"
+                   Text="{Binding AccountSetup.IdentitySecret}"
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
+          <TextBox Watermark="Revocation code"
+                   Text="{Binding AccountSetup.RevocationCode}"
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
+          <TextBox Watermark="Access token"
+                   Text="{Binding AccountSetup.AccessToken}"
+                   PasswordChar="{Binding AccountSetup.SecretMaskCharacter}" />
+
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8">
+            <Button Content="Save account"
+                    Click="OnSaveAccountClick" />
+            <Button Content="Reveal secrets"
+                    IsVisible="{Binding AccountSetup.IsSecretRevealAllowed}"
+                    Click="OnToggleSecretVisibilityClick" />
+          </StackPanel>
+
+          <TextBlock Text="Sign in and authenticator recovery"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}" />
+
+          <TextBox Watermark="Account name"
+                   Text="{Binding Recovery.AccountName}" />
+          <TextBox Watermark="Password"
+                   Text="{Binding Recovery.Password}"
+                   PasswordChar="*" />
+          <Button Content="Sign in"
+                  Click="OnBeginSignInClick" />
+
+          <TextBlock Text="{Binding Recovery.GuardMessage}"
+                     IsVisible="{Binding Recovery.IsSignInStarted}"
+                     TextWrapping="Wrap" />
+          <TextBox Watermark="Guard code"
+                   IsVisible="{Binding Recovery.IsCodeRequired}"
+                   Text="{Binding Recovery.GuardCode}" />
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      IsVisible="{Binding Recovery.IsSignInStarted}">
+            <Button Content="Submit code"
+                    IsVisible="{Binding Recovery.IsCodeRequired}"
+                    Click="OnSubmitGuardCodeClick" />
+            <Button Content="Complete sign-in"
+                    Click="OnCompleteSignInClick" />
+            <Button Content="Sign out"
+                    Click="OnSignOutClick" />
+          </StackPanel>
+
+          <TextBlock Text="Authenticator"
+                     IsVisible="{Binding Recovery.IsGuardSubmitted}" />
+          <TextBlock Text="The number of removal attempts that remain is shown by the status check."
+                     FontSize="{DynamicResource StatusFontSize}"
+                     Foreground="{DynamicResource SecondaryForegroundBrush}"
+                     IsVisible="{Binding Recovery.IsGuardSubmitted}"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Recovery.IssuedRevocationCode}"
+                     AutomationProperties.Name="Issued revocation code"
+                     IsVisible="{Binding Recovery.HasIssuedRevocationCode}"
+                     TextWrapping="Wrap" />
+          <TextBox Watermark="Revocation code"
+                   IsVisible="{Binding Recovery.IsGuardSubmitted}"
+                   Text="{Binding Recovery.RecoveryCode}"
+                   PasswordChar="*" />
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      IsVisible="{Binding Recovery.IsGuardSubmitted}">
+            <Button Content="Check status"
+                    Click="OnCheckAuthenticatorStatusClick" />
+            <Button Content="Start recovery"
+                    IsVisible="{Binding Recovery.IsGuardSubmitted}"
+                    Click="OnStartLostDeviceRecoveryClick" />
+            <Button Content="Remove authenticator"
+                    Click="OnRemoveAuthenticatorClick" />
+            <Button Content="Enrol authenticator"
+                    IsVisible="{Binding Recovery.CanEnrolAuthenticator}"
+                    Click="OnEnrolAuthenticatorClick" />
+            <Button Content="Activate authenticator"
+                    IsVisible="{Binding Recovery.HasPendingActivation}"
+                    Click="OnFinalizeAuthenticatorClick" />
+          </StackPanel>
+
+          <TextBox Watermark="SMS code"
+                   IsVisible="{Binding Recovery.IsSmsCodeRequired}"
+                   Text="{Binding Recovery.SmsCode}" />
+          <Button Content="Recover lost device"
+                  IsVisible="{Binding Recovery.IsRecoveringLostDevice}"
+                  Click="OnRecoverLostDeviceClick" />
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</Window>

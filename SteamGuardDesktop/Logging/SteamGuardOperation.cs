@@ -93,11 +93,6 @@ namespace SteamGuardDesktop.Logging
         public static Operation ApplyConfirmationDecision => new SteamGuardOperation(nameof(ApplyConfirmationDecision));
 
         /// <summary>
-        /// Gets the operation that signs a confirmation request.
-        /// </summary>
-        public static Operation SignConfirmationRequest => new SteamGuardOperation(nameof(SignConfirmationRequest));
-
-        /// <summary>
         /// Gets the operation that sends a request to Steam.
         /// </summary>
         public static Operation SendSteamRequest => new SteamGuardOperation(nameof(SendSteamRequest));

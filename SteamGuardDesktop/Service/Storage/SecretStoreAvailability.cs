@@ -11,13 +11,8 @@ namespace SteamGuardDesktop.Service.Storage
         Available = 0,
 
         /// <summary>
-        /// The credential store exists but is locked until the user unlocks the host session.
-        /// </summary>
-        Locked = 1,
-
-        /// <summary>
         /// No credential store is available on the host platform.
         /// </summary>
-        Unavailable = 2
+        Unavailable = 1
     }
 }

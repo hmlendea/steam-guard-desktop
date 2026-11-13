@@ -27,6 +27,7 @@ A cross-platform desktop application that generates Steam Guard authentication c
   - [Build](#build)
   - [Run](#run)
   - [Test](#test)
+  - [Release](#release)
   - [Dependencies](#dependencies)
 - [GitHub Actions](#github-actions)
 - [Project Structure](#project-structure)
@@ -223,6 +224,18 @@ dotnet run --project SteamGuardDesktop
 dotnet test SteamGuardDesktop.slnx
 ```
 
+### Release
+
+The repository includes `release.sh`, which delegates to the upstream deployment script used by the project maintainer.
+
+```bash
+bash ./release.sh 1.0.0
+```
+
+This script downloads and executes an external release helper from `https://raw.githubusercontent.com/hmlendea/deployment-scripts/master/release/dotnet/10.0.sh`.
+
+**Note:** Piping into `bash` is an intensely controversial topic. Please review any external scripts before running them in your environment!
+
 ### Dependencies
 
 | Package | Version | Scope | Purpose |
@@ -231,7 +244,6 @@ dotnet test SteamGuardDesktop.slnx
 | `Avalonia.Desktop` | `11.3.23` | Runtime | Platform desktop initialisation. |
 | `Avalonia.Themes.Fluent` | `11.3.23` | Runtime | Control templates that the shared application theme styles. |
 | `CommunityToolkit.Mvvm` | `8.4.2` | Runtime | Observable objects and generated properties. |
-| `FluentAvaloniaUI` | `2.5.1` | Runtime | Windows Fluent design resources. |
 | `Microsoft.Extensions.DependencyInjection` | `10.0.13` | Runtime | Service composition. |
 | `NuciLog` | `1.2.1` | Runtime | Structured diagnostics output. |
 | `NuciLog.Core` | `3.1.0` | Runtime | Logging contracts, operations, and sensitive keys. |
@@ -243,6 +255,7 @@ dotnet test SteamGuardDesktop.slnx
 | Workflow | Purpose | What it does |
 |----------|---------|--------------|
 | [ .NET ](https://github.com/hmlendea/steam-guard-desktop/blob/master/.github/workflows/dotnet.yml) | Continuous integration | Restores dependencies, builds the solution, and runs every test project. |
+| [ GitHub Release ](https://github.com/hmlendea/steam-guard-desktop/blob/master/.github/workflows/github-release.yml) | Release packaging | Builds the release artefacts for every supported platform from the published tag. |
 | [ Security ](https://github.com/hmlendea/steam-guard-desktop/blob/master/.github/workflows/security.yml) | Security scanning | Checks for vulnerable packages, builds the solution, and runs CodeQL analysis. |
 
 ## 🗂️ Project Structure

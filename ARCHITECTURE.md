@@ -376,8 +376,9 @@ The principal dependency rules are:
 | Concern | Current Design | Architectural Consequence |
 |---------|----------------|---------------------------|
 | Process topology | One desktop process per user session | No server component or shared state |
-| Deployment unit | Self-contained build published per platform | Each platform build is validated separately |
+| Deployment unit | Self-contained build published per supported runtime identifier | Each platform build is validated separately |
 | Persistent state | Encrypted account file and credential store entries in the user profile | Removing the account removes both |
+| Release packaging | A published release runs `.github/workflows/github-release.yml`, which delegates to the shared release script | Artefacts are produced by one script rather than by per-platform repository logic |
 | Availability | Local code generation works offline | Confirmations require Steam connectivity |
 | Recovery | A missing or unreadable secret produces an explicit unavailable state | The user re-enters the secrets |
 

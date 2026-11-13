@@ -19,7 +19,6 @@ This roadmap describes the current focus, the planned labour for the next horizo
 
 - **In Progress**: Live account validation - Verify that a generated code matches the official Steam authenticator for the same time window.
 - **Planned**: Platform credential validation - Verify secret storage on Linux, macOS, and Windows.
-- **Planned**: Package the application for the supported platforms.
 
 ## 🗺️ Planned Labour
 
@@ -27,6 +26,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 
 - Validate a generated code against the official Steam authenticator for the same time window.
 - Confirm credential store behaviour and application startup on each supported desktop platform.
+- Confirm that a published release produces an installable artefact for every supported runtime identifier.
 
 ### Next Quarter
 
@@ -35,7 +35,6 @@ This roadmap describes the current focus, the planned labour for the next horizo
 
 ### No Fixed Horizon
 
-- Provide packaged builds for the supported platforms.
 - Add QR-code provisioning for account enrolment if it can be implemented without contacting an untrusted service.
 
 ## 🧱 Objectives
@@ -43,7 +42,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 | Objective | Target Period | Result | Status |
 |-----------|---------------|---------|--------|
 | Live account validation | Next 30 days | A generated code matches the official Steam authenticator for the same time window. | In Progress |
-| Packaged distribution | No fixed horizon | Signed builds available for Windows, macOS, and Linux. | Planned |
+| Packaged distribution | Next 30 days | A published release produces a packaged build for every supported runtime identifier. | In Progress |
 | Platform credential validation | Next quarter | Verified secret storage on Linux, macOS, and Windows. | Planned |
 
 ## ⚠️ Dependencies and Risks
@@ -52,6 +51,7 @@ This roadmap describes the current focus, the planned labour for the next horizo
 - Platform credential store availability - A session without a reachable credential store falls back to weaker file encryption - Report unavailability and keep the encrypted fallback documented.
 - Steam access token provisioning - Confirmations require a token that the application obtains only through a sign-in - Surface a clear re-authentication state when the token expires.
 - Account recovery depends on a sign-in - Recovery cannot complete without an authenticated session - Keep the password out of persistence and require an explicit confirmation step.
+- Shared release script - Release packaging depends on a remotely hosted script that can change independently of this repository - Keep the workflow pinned to the same script that `release.sh` uses and verify a published release after each change.
 
 ## 🚫 Out of Scope
 
